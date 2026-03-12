@@ -46,7 +46,7 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.85, alpha: 1.0),
+                capsuleBase: NSColor(white: 0.93, alpha: 1.0),
                 capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
                 centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
                 centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
@@ -61,7 +61,7 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.85, alpha: 1.0),
+                capsuleBase: NSColor(white: 0.93, alpha: 1.0),
                 capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
                 centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
                 centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
@@ -76,7 +76,7 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.88, alpha: 1.0),
+                capsuleBase: NSColor(white: 0.92, alpha: 1.0),
                 capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
                 centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
                 centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
@@ -91,7 +91,7 @@ struct Theme {
                 handColor: NSColor(white: 0.93, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.5),
                 handShadow: NSColor(white: 0.0, alpha: 0.4),
-                capsuleBase: NSColor(white: 0.90, alpha: 1.0),
+                capsuleBase: NSColor(white: 0.93, alpha: 1.0),
                 capsuleHighlight: NSColor(white: 1.0, alpha: 0.6),
                 centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
                 centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
@@ -106,7 +106,7 @@ struct Theme {
                 handColor: NSColor(white: 0.93, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.5),
                 handShadow: NSColor(white: 0.0, alpha: 0.35),
-                capsuleBase: NSColor(white: 0.90, alpha: 1.0),
+                capsuleBase: NSColor(white: 0.93, alpha: 1.0),
                 capsuleHighlight: NSColor(white: 1.0, alpha: 0.6),
                 centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
                 centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
@@ -121,7 +121,7 @@ struct Theme {
                 handColor: NSColor(white: 0.93, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.5),
                 handShadow: NSColor(white: 0.0, alpha: 0.3),
-                capsuleBase: NSColor(white: 0.90, alpha: 1.0),
+                capsuleBase: NSColor(white: 0.93, alpha: 1.0),
                 capsuleHighlight: NSColor(white: 1.0, alpha: 0.6),
                 centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
                 centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
@@ -136,7 +136,7 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.85, alpha: 1.0),
+                capsuleBase: NSColor(white: 0.93, alpha: 1.0),
                 capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
                 centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
                 centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
@@ -151,7 +151,7 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.85, alpha: 1.0),
+                capsuleBase: NSColor(white: 0.93, alpha: 1.0),
                 capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
                 centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
                 centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
@@ -166,7 +166,7 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.85, alpha: 1.0),
+                capsuleBase: NSColor(white: 0.93, alpha: 1.0),
                 capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
                 centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
                 centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
@@ -181,7 +181,7 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.85, alpha: 1.0),
+                capsuleBase: NSColor(white: 0.93, alpha: 1.0),
                 capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
                 centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
                 centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
@@ -196,7 +196,7 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.85, alpha: 1.0),
+                capsuleBase: NSColor(white: 0.93, alpha: 1.0),
                 capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
                 centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
                 centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
@@ -211,7 +211,7 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.85, alpha: 1.0),
+                capsuleBase: NSColor(white: 0.93, alpha: 1.0),
                 capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
                 centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
                 centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
@@ -226,7 +226,7 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.85, alpha: 1.0),
+                capsuleBase: NSColor(white: 0.93, alpha: 1.0),
                 capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
                 centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
                 centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
@@ -241,7 +241,7 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.85, alpha: 1.0),
+                capsuleBase: NSColor(white: 0.93, alpha: 1.0),
                 capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
                 centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
                 centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
@@ -256,7 +256,7 @@ struct Theme {
                 handColor: NSColor(white: 0.93, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.5),
                 handShadow: NSColor(white: 0.0, alpha: 0.4),
-                capsuleBase: NSColor(white: 0.80, alpha: 1.0),
+                capsuleBase: NSColor(white: 0.87, alpha: 1.0),
                 capsuleHighlight: NSColor(white: 1.0, alpha: 0.5),
                 centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
                 centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
@@ -271,7 +271,7 @@ struct Theme {
                 handColor: NSColor(white: 0.93, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.4),
                 handShadow: NSColor(white: 0.0, alpha: 0.5),
-                capsuleBase: NSColor(white: 0.75, alpha: 1.0),
+                capsuleBase: NSColor(white: 0.83, alpha: 1.0),
                 capsuleHighlight: NSColor(white: 1.0, alpha: 0.4),
                 centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
                 centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
@@ -675,9 +675,11 @@ class ChronofaceView: ScreenSaverView {
         let secondAngle = (secondValue / 60.0) * .pi * 2.0
 
         drawHand(ctx: ctx, cx: cx, cy: cy, angle: hourAngle,
-                 length: radius * 0.48, width: radius * 0.045, tailLength: radius * 0.08)
+                 length: radius * 0.58, width: radius * 0.054,
+                 tailLength: radius * 0.12, neckLength: radius * 0.12)
         drawHand(ctx: ctx, cx: cx, cy: cy, angle: minuteAngle,
-                 length: radius * 0.68, width: radius * 0.035, tailLength: radius * 0.08)
+                 length: radius * 0.82, width: radius * 0.042,
+                 tailLength: radius * 0.12, neckLength: radius * 0.12)
         drawSecondHand(ctx: ctx, cx: cx, cy: cy, angle: secondAngle, radius: radius)
         drawCenterDot(ctx: ctx, cx: cx, cy: cy, radius: radius)
 
@@ -722,38 +724,60 @@ class ChronofaceView: ScreenSaverView {
     // MARK: - Hour capsule markers (3D raised effect)
 
     private func drawHourCapsules(ctx: CGContext, cx: CGFloat, cy: CGFloat, radius: CGFloat) {
-        let capsuleWidth = radius * 0.04
+        let capsuleW = radius * 0.054
+        let innerR = radius * 0.78
+        let outerR = radius * 0.92
+        let capsuleH = outerR - innerR
+        let centerR = (innerR + outerR) / 2
+        let cornerR = capsuleW / 2
+        let border = capsuleW / 2 * 0.50
+        let innerHW = capsuleW / 2 - border
+        let lumeColor = NSColor(red: 0.78, green: 0.90, blue: 0.72, alpha: 1.0)
 
         for i in 0..<12 {
             let angle = (CGFloat(i) / 12.0) * .pi * 2.0
-            let inner = polarToPoint(cx: cx, cy: cy, angle: angle, r: radius * 0.78)
-            let outer = polarToPoint(cx: cx, cy: cy, angle: angle, r: radius * 0.92)
 
             ctx.saveGState()
+            let cp = polarToPoint(cx: cx, cy: cy, angle: angle, r: centerR)
+            ctx.translateBy(x: cp.x, y: cp.y)
+            ctx.rotate(by: -angle)
+
+            // Outer shape
+            let rect = CGRect(x: -capsuleW / 2, y: -capsuleH / 2,
+                              width: capsuleW, height: capsuleH)
+            let outerPath = CGPath(roundedRect: rect,
+                              cornerWidth: cornerR, cornerHeight: cornerR,
+                              transform: nil)
+
+            // Inner cutout (stadium inset by border)
+            let cutoutRect = CGRect(x: -innerHW, y: -capsuleH / 2 + border,
+                                    width: innerHW * 2, height: capsuleH - border * 2)
+            let cutoutPath = CGPath(roundedRect: cutoutRect,
+                                    cornerWidth: innerHW, cornerHeight: innerHW,
+                                    transform: nil)
+
+            // Combined path for even-odd fill
+            let combined = CGMutablePath()
+            combined.addPath(outerPath)
+            combined.addPath(cutoutPath)
+
+            // Frame with shadow
             ctx.setShadow(
-                offset: CGSize(width: capsuleWidth * 0.2, height: -capsuleWidth * 0.4),
-                blur: capsuleWidth * 1.2,
+                offset: CGSize(width: capsuleW * 0.15, height: -capsuleW * 0.3),
+                blur: capsuleW * 0.8,
                 color: theme.handShadow.cgColor
             )
-            ctx.setStrokeColor(theme.capsuleBase.cgColor)
-            ctx.setLineWidth(capsuleWidth)
-            ctx.setLineCap(.round)
-            ctx.move(to: inner)
-            ctx.addLine(to: outer)
-            ctx.strokePath()
+            ctx.setFillColor(theme.handColor.cgColor)
+            ctx.addPath(combined)
+            ctx.fillPath(using: .evenOdd)
+
+            ctx.setShadow(offset: .zero, blur: 0)
+
+            // Lume fill on top (after frame, so shadow doesn't cover it)
+            ctx.setFillColor(lumeColor.cgColor)
+            ctx.addPath(cutoutPath)
+            ctx.fillPath()
             ctx.restoreGState()
-
-            let perpAngle = angle - .pi / 2.0
-            let a = perpAngle - .pi / 2.0
-            let dx = cos(a) * capsuleWidth * 0.2
-            let dy = -sin(a) * capsuleWidth * 0.2
-
-            ctx.setStrokeColor(theme.capsuleHighlight.cgColor)
-            ctx.setLineWidth(capsuleWidth * 0.3)
-            ctx.setLineCap(.round)
-            ctx.move(to: CGPoint(x: inner.x + dx, y: inner.y + dy))
-            ctx.addLine(to: CGPoint(x: outer.x + dx, y: outer.y + dy))
-            ctx.strokePath()
         }
     }
 
@@ -806,50 +830,139 @@ class ChronofaceView: ScreenSaverView {
     // MARK: - Clock hands with 3D effect
 
     private func drawHand(ctx: CGContext, cx: CGFloat, cy: CGFloat,
-                          angle: CGFloat, length: CGFloat, width: CGFloat, tailLength: CGFloat) {
-        let tip = polarToPoint(cx: cx, cy: cy, angle: angle, r: length)
-        let tail = polarToPoint(cx: cx, cy: cy, angle: angle + .pi, r: tailLength)
-
+                          angle: CGFloat, length: CGFloat, width: CGFloat,
+                          tailLength: CGFloat, neckLength: CGFloat) {
         ctx.saveGState()
+        ctx.translateBy(x: cx, y: cy)
+        ctx.rotate(by: -angle)
+
+        let hw = width / 2
+        let neckHW = width * 0.15
+        let tipR = hw                      // semicircular tip radius
+        let bodyStart = neckLength          // where body begins (above neck)
+        let shoulderH = width * 0.20        // height of shoulder transition
+        let k: CGFloat = 0.5523             // bezier circle approximation constant
+
+        // --- Straight-sided body with rounded tip ---
+        let body = CGMutablePath()
+
+        // Start at right neck, at tail bottom
+        body.move(to: CGPoint(x: neckHW, y: -tailLength))
+        body.addLine(to: CGPoint(x: -neckHW, y: -tailLength))
+
+        // Left neck going up to shoulder
+        body.addLine(to: CGPoint(x: -neckHW, y: bodyStart))
+
+        // Left shoulder: neck → body width
+        body.addCurve(to: CGPoint(x: -hw, y: bodyStart + shoulderH),
+                      control1: CGPoint(x: -neckHW, y: bodyStart + shoulderH * 0.45),
+                      control2: CGPoint(x: -hw, y: bodyStart + shoulderH * 0.55))
+
+        // Left side straight up to tip area
+        body.addLine(to: CGPoint(x: -hw, y: length - tipR))
+
+        // Semicircular tip (two quarter-circle bezier curves)
+        body.addCurve(to: CGPoint(x: 0, y: length),
+                      control1: CGPoint(x: -hw, y: length - tipR + tipR * k),
+                      control2: CGPoint(x: -hw * k, y: length))
+        body.addCurve(to: CGPoint(x: hw, y: length - tipR),
+                      control1: CGPoint(x: hw * k, y: length),
+                      control2: CGPoint(x: hw, y: length - tipR + tipR * k))
+
+        // Right side straight down
+        body.addLine(to: CGPoint(x: hw, y: bodyStart + shoulderH))
+
+        // Right shoulder: body → neck width
+        body.addCurve(to: CGPoint(x: neckHW, y: bodyStart),
+                      control1: CGPoint(x: hw, y: bodyStart + shoulderH * 0.55),
+                      control2: CGPoint(x: neckHW, y: bodyStart + shoulderH * 0.45))
+
+        // Right neck going down
+        body.addLine(to: CGPoint(x: neckHW, y: -tailLength))
+        body.closeSubpath()
+
+        // Cutout following outer contour (stadium shape, inset by border)
+        let straightBottom = bodyStart + shoulderH
+        let border = hw * 0.57
+        let innerHW = hw - border
+        let cutoutBottom = straightBottom + border
+        let cutoutTop = length - border
+        let cutoutRect = CGRect(x: -innerHW, y: cutoutBottom,
+                                width: innerHW * 2, height: cutoutTop - cutoutBottom)
+        let cutoutPath = CGPath(roundedRect: cutoutRect,
+                                cornerWidth: innerHW, cornerHeight: innerHW,
+                                transform: nil)
+        body.addRoundedRect(in: cutoutRect,
+                            cornerWidth: innerHW, cornerHeight: innerHW)
+
+        // --- Ring at pivot ---
+        let ringOuterR = width * 0.90
+        let ringInnerR = width * 0.525
+        let ring = CGMutablePath()
+        ring.addEllipse(in: CGRect(x: -ringOuterR, y: -ringOuterR,
+                                   width: ringOuterR * 2, height: ringOuterR * 2))
+        ring.addEllipse(in: CGRect(x: -ringInnerR, y: -ringInnerR,
+                                   width: ringInnerR * 2, height: ringInnerR * 2))
+
+        // --- Draw frame with shadow (transparency layer avoids double-shadow) ---
         ctx.setShadow(
             offset: CGSize(width: width * 0.3, height: -width * 0.5),
             blur: width * 1.5,
             color: theme.handShadow.cgColor
         )
-        ctx.setStrokeColor(theme.handColor.cgColor)
-        ctx.setLineWidth(width)
-        ctx.setLineCap(.round)
-        ctx.move(to: tail)
-        ctx.addLine(to: tip)
-        ctx.strokePath()
+        ctx.beginTransparencyLayer(auxiliaryInfo: nil)
+
+        ctx.setFillColor(theme.handColor.cgColor)
+        ctx.addPath(body)
+        ctx.fillPath(using: .evenOdd)
+
+        ctx.addPath(ring)
+        ctx.fillPath(using: .evenOdd)
+
+        ctx.endTransparencyLayer()
+
+        // --- Lume fill on top (after frame+shadow so it's not covered) ---
+        let lumeColor = NSColor(red: 0.78, green: 0.90, blue: 0.72, alpha: 1.0)
+        ctx.setFillColor(lumeColor.cgColor)
+        ctx.addPath(cutoutPath)
+        ctx.fillPath()
+
         ctx.restoreGState()
-
-        let perpAngle = angle - .pi / 2.0
-        let a = perpAngle - .pi / 2.0
-        let dx = cos(a) * width * 0.15
-        let dy = -sin(a) * width * 0.15
-
-        ctx.setStrokeColor(theme.handHighlight.cgColor)
-        ctx.setLineWidth(width * 0.25)
-        ctx.setLineCap(.round)
-        ctx.move(to: CGPoint(x: tail.x + dx, y: tail.y + dy))
-        ctx.addLine(to: CGPoint(x: tip.x + dx, y: tip.y + dy))
-        ctx.strokePath()
     }
 
     // MARK: - Second hand
 
     private func drawSecondHand(ctx: CGContext, cx: CGFloat, cy: CGFloat,
                                 angle: CGFloat, radius: CGFloat) {
-        let tip = polarToPoint(cx: cx, cy: cy, angle: angle, r: radius * 0.78)
-        let tail = polarToPoint(cx: cx, cy: cy, angle: angle + .pi, r: radius * 0.15)
+        ctx.saveGState()
+        ctx.translateBy(x: cx, y: cy)
+        ctx.rotate(by: -angle)
 
+        let tipY = radius * 0.78
+        let tailY = -radius * 0.18
+        let needleWidth = radius * 0.007
+        let ringOuterR = radius * 0.032
+        let ringInnerR = radius * 0.019
+
+        // Thin needle
         ctx.setStrokeColor(theme.secondHand.cgColor)
-        ctx.setLineWidth(radius * 0.01)
+        ctx.setLineWidth(needleWidth)
         ctx.setLineCap(.round)
-        ctx.move(to: tail)
-        ctx.addLine(to: tip)
+        ctx.move(to: CGPoint(x: 0, y: tailY))
+        ctx.addLine(to: CGPoint(x: 0, y: tipY))
         ctx.strokePath()
+
+        // Ring at pivot
+        let ringPath = CGMutablePath()
+        ringPath.addEllipse(in: CGRect(x: -ringOuterR, y: -ringOuterR,
+                                       width: ringOuterR * 2, height: ringOuterR * 2))
+        ringPath.addEllipse(in: CGRect(x: -ringInnerR, y: -ringInnerR,
+                                       width: ringInnerR * 2, height: ringInnerR * 2))
+        ctx.setFillColor(theme.secondHand.cgColor)
+        ctx.addPath(ringPath)
+        ctx.fillPath(using: .evenOdd)
+
+        ctx.restoreGState()
     }
 
     // MARK: - Date window at 3 o'clock
