@@ -29,10 +29,6 @@ struct Theme {
     let handColor: NSColor
     let handHighlight: NSColor
     let handShadow: NSColor
-    let capsuleBase: NSColor
-    let capsuleHighlight: NSColor
-    let centerGradientStart: NSColor
-    let centerGradientEnd: NSColor
     let centerDot: NSColor
     let secondHand: NSColor
 
@@ -43,15 +39,11 @@ struct Theme {
                 background: NSColor(displayP3Red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0),
                 tickColor: NSColor(white: 0.15, alpha: 1.0),
                 numberColor: NSColor(white: 0.15, alpha: 1.0),
-                handColor: NSColor(white: 0.91, alpha: 1.0),
+                handColor: NSColor(white: 0.98, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.85, alpha: 1.0),
-                capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
-                centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
-                centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
                 centerDot: NSColor(white: 0.75, alpha: 1.0),
-                secondHand: NSColor(white: 0.91, alpha: 1.0)
+                secondHand: NSColor(red: 0.80, green: 0.12, blue: 0.12, alpha: 1.0)
             )
         case .turquoise:
             return Theme(
@@ -61,12 +53,8 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.85, alpha: 1.0),
-                capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
-                centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
-                centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
                 centerDot: NSColor(white: 0.75, alpha: 1.0),
-                secondHand: NSColor(white: 0.91, alpha: 1.0)
+                secondHand: NSColor(red: 0.80, green: 0.12, blue: 0.12, alpha: 1.0)
             )
         case .glacier:
             return Theme(
@@ -76,12 +64,8 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.88, alpha: 1.0),
-                capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
-                centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
-                centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
                 centerDot: NSColor(white: 0.75, alpha: 1.0),
-                secondHand: NSColor(white: 0.91, alpha: 1.0)
+                secondHand: NSColor(red: 0.80, green: 0.12, blue: 0.12, alpha: 1.0)
             )
         case .ocean:
             return Theme(
@@ -91,12 +75,8 @@ struct Theme {
                 handColor: NSColor(white: 0.93, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.5),
                 handShadow: NSColor(white: 0.0, alpha: 0.4),
-                capsuleBase: NSColor(white: 0.90, alpha: 1.0),
-                capsuleHighlight: NSColor(white: 1.0, alpha: 0.6),
-                centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
-                centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
                 centerDot: NSColor(white: 0.75, alpha: 1.0),
-                secondHand: NSColor(white: 0.93, alpha: 1.0)
+                secondHand: NSColor(red: 0.80, green: 0.12, blue: 0.12, alpha: 1.0)
             )
         case .tennis:
             return Theme(
@@ -106,12 +86,8 @@ struct Theme {
                 handColor: NSColor(white: 0.93, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.5),
                 handShadow: NSColor(white: 0.0, alpha: 0.35),
-                capsuleBase: NSColor(white: 0.90, alpha: 1.0),
-                capsuleHighlight: NSColor(white: 1.0, alpha: 0.6),
-                centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
-                centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
                 centerDot: NSColor(white: 0.75, alpha: 1.0),
-                secondHand: NSColor(white: 0.93, alpha: 1.0)
+                secondHand: NSColor(red: 0.80, green: 0.12, blue: 0.12, alpha: 1.0)
             )
         case .signalBlue:
             return Theme(
@@ -121,12 +97,8 @@ struct Theme {
                 handColor: NSColor(white: 0.93, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.5),
                 handShadow: NSColor(white: 0.0, alpha: 0.3),
-                capsuleBase: NSColor(white: 0.90, alpha: 1.0),
-                capsuleHighlight: NSColor(white: 1.0, alpha: 0.6),
-                centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
-                centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
                 centerDot: NSColor(white: 0.75, alpha: 1.0),
-                secondHand: NSColor(white: 0.93, alpha: 1.0)
+                secondHand: NSColor(red: 0.80, green: 0.12, blue: 0.12, alpha: 1.0)
             )
         case .salmon:
             return Theme(
@@ -136,12 +108,8 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.85, alpha: 1.0),
-                capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
-                centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
-                centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
                 centerDot: NSColor(white: 0.75, alpha: 1.0),
-                secondHand: NSColor(white: 0.91, alpha: 1.0)
+                secondHand: NSColor(red: 0.80, green: 0.12, blue: 0.12, alpha: 1.0)
             )
         case .yellow:
             return Theme(
@@ -151,12 +119,8 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.85, alpha: 1.0),
-                capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
-                centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
-                centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
                 centerDot: NSColor(white: 0.75, alpha: 1.0),
-                secondHand: NSColor(white: 0.91, alpha: 1.0)
+                secondHand: NSColor(red: 0.80, green: 0.12, blue: 0.12, alpha: 1.0)
             )
         case .beige:
             return Theme(
@@ -166,12 +130,8 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.85, alpha: 1.0),
-                capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
-                centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
-                centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
                 centerDot: NSColor(white: 0.75, alpha: 1.0),
-                secondHand: NSColor(white: 0.91, alpha: 1.0)
+                secondHand: NSColor(red: 0.80, green: 0.12, blue: 0.12, alpha: 1.0)
             )
         case .pistachio:
             return Theme(
@@ -181,12 +141,8 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.85, alpha: 1.0),
-                capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
-                centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
-                centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
                 centerDot: NSColor(white: 0.75, alpha: 1.0),
-                secondHand: NSColor(white: 0.91, alpha: 1.0)
+                secondHand: NSColor(red: 0.80, green: 0.12, blue: 0.12, alpha: 1.0)
             )
         case .lavender:
             return Theme(
@@ -196,12 +152,8 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.85, alpha: 1.0),
-                capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
-                centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
-                centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
                 centerDot: NSColor(white: 0.75, alpha: 1.0),
-                secondHand: NSColor(white: 0.91, alpha: 1.0)
+                secondHand: NSColor(red: 0.80, green: 0.12, blue: 0.12, alpha: 1.0)
             )
         case .rose:
             return Theme(
@@ -211,12 +163,8 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.85, alpha: 1.0),
-                capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
-                centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
-                centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
                 centerDot: NSColor(white: 0.75, alpha: 1.0),
-                secondHand: NSColor(white: 0.91, alpha: 1.0)
+                secondHand: NSColor(red: 0.80, green: 0.12, blue: 0.12, alpha: 1.0)
             )
         case .skyBlue:
             return Theme(
@@ -226,12 +174,8 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.85, alpha: 1.0),
-                capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
-                centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
-                centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
                 centerDot: NSColor(white: 0.75, alpha: 1.0),
-                secondHand: NSColor(white: 0.91, alpha: 1.0)
+                secondHand: NSColor(red: 0.80, green: 0.12, blue: 0.12, alpha: 1.0)
             )
         case .cream:
             return Theme(
@@ -241,12 +185,8 @@ struct Theme {
                 handColor: NSColor(white: 0.91, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.6),
                 handShadow: NSColor(white: 0.0, alpha: 0.15),
-                capsuleBase: NSColor(white: 0.85, alpha: 1.0),
-                capsuleHighlight: NSColor(white: 1.0, alpha: 0.7),
-                centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
-                centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
                 centerDot: NSColor(white: 0.75, alpha: 1.0),
-                secondHand: NSColor(white: 0.91, alpha: 1.0)
+                secondHand: NSColor(red: 0.80, green: 0.12, blue: 0.12, alpha: 1.0)
             )
         case .slate:
             return Theme(
@@ -256,12 +196,8 @@ struct Theme {
                 handColor: NSColor(white: 0.93, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.5),
                 handShadow: NSColor(white: 0.0, alpha: 0.4),
-                capsuleBase: NSColor(white: 0.80, alpha: 1.0),
-                capsuleHighlight: NSColor(white: 1.0, alpha: 0.5),
-                centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
-                centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
                 centerDot: NSColor(white: 0.75, alpha: 1.0),
-                secondHand: NSColor(white: 0.93, alpha: 1.0)
+                secondHand: NSColor(red: 0.80, green: 0.12, blue: 0.12, alpha: 1.0)
             )
         case .noir:
             return Theme(
@@ -271,12 +207,8 @@ struct Theme {
                 handColor: NSColor(white: 0.93, alpha: 1.0),
                 handHighlight: NSColor(white: 1.0, alpha: 0.4),
                 handShadow: NSColor(white: 0.0, alpha: 0.5),
-                capsuleBase: NSColor(white: 0.75, alpha: 1.0),
-                capsuleHighlight: NSColor(white: 1.0, alpha: 0.4),
-                centerGradientStart: NSColor(white: 0.96, alpha: 1.0),
-                centerGradientEnd: NSColor(white: 0.82, alpha: 1.0),
                 centerDot: NSColor(white: 0.75, alpha: 1.0),
-                secondHand: NSColor(white: 0.93, alpha: 1.0)
+                secondHand: NSColor(red: 0.80, green: 0.12, blue: 0.12, alpha: 1.0)
             )
         }
     }
@@ -336,6 +268,7 @@ enum SettingsStore {
     }
 
     private static let showTempKey = "ChronofaceShowTemp"
+    private static let cityKey = "ChronofaceCity"
 
     static var showTemperature: Bool {
         get {
@@ -348,7 +281,47 @@ enum SettingsStore {
             UserDefaults.standard.set(newValue, forKey: showTempKey)
         }
     }
+
+    static var selectedCity: String {
+        get {
+            return UserDefaults.standard.string(forKey: cityKey) ?? "Kyiv"
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: cityKey)
+        }
+    }
 }
+
+// MARK: - City database
+
+struct CityInfo {
+    let name: String
+    let lat: Double
+    let lon: Double
+}
+
+let cities: [CityInfo] = [
+    CityInfo(name: "Kyiv", lat: 50.4501, lon: 30.5234),
+    CityInfo(name: "Lviv", lat: 49.8397, lon: 24.0297),
+    CityInfo(name: "London", lat: 51.5074, lon: -0.1278),
+    CityInfo(name: "New York", lat: 40.7128, lon: -74.0060),
+    CityInfo(name: "Los Angeles", lat: 34.0522, lon: -118.2437),
+    CityInfo(name: "Paris", lat: 48.8566, lon: 2.3522),
+    CityInfo(name: "Berlin", lat: 52.5200, lon: 13.4050),
+    CityInfo(name: "Tokyo", lat: 35.6762, lon: 139.6503),
+    CityInfo(name: "Dubai", lat: 25.2048, lon: 55.2708),
+    CityInfo(name: "Istanbul", lat: 41.0082, lon: 28.9784),
+    CityInfo(name: "Bangkok", lat: 13.7563, lon: 100.5018),
+    CityInfo(name: "Singapore", lat: 1.3521, lon: 103.8198),
+    CityInfo(name: "Sydney", lat: -33.8688, lon: 151.2093),
+    CityInfo(name: "Toronto", lat: 43.6532, lon: -79.3832),
+    CityInfo(name: "Barcelona", lat: 41.3874, lon: 2.1686),
+    CityInfo(name: "Rome", lat: 41.9028, lon: 12.4964),
+    CityInfo(name: "Beijing", lat: 39.9042, lon: 116.4074),
+    CityInfo(name: "Seoul", lat: 37.5665, lon: 126.9780),
+    CityInfo(name: "Tel Aviv", lat: 32.0853, lon: 34.7818),
+    CityInfo(name: "Buenos Aires", lat: -34.6037, lon: -58.3816),
+]
 
 // MARK: - Main screensaver view
 
@@ -363,8 +336,6 @@ class ChronofaceView: ScreenSaverView {
     private var currentTemperature: String?
     private var currentCity: String?
     private var lastWeatherFetch: Date?
-    private var cachedLat: Double?
-    private var cachedLon: Double?
     private var isFetchingWeather = false
 
     // MARK: - Initialization
@@ -415,10 +386,10 @@ class ChronofaceView: ScreenSaverView {
         let gap: CGFloat = 18 // uniform gap between all sections
         let windowWidth = marginX * 2 + CGFloat(cols) * circleSize + CGFloat(cols - 1) * hSpacing
 
-        // Layout from bottom: OK, Movement, Checkboxes, Row1, Row0, Theme label
-        let okH: CGFloat = 28, movH: CGFloat = 24, cbH: CGFloat = 20, themeH: CGFloat = 20
+        // Layout from bottom: OK, Movement, City, Checkboxes, Row1, Row0, Theme label
+        let okH: CGFloat = 28, movH: CGFloat = 24, cityH: CGFloat = 26, cbH: CGFloat = 20, themeH: CGFloat = 20
         let rowH = circleSize + 1 + labelHeight // circle + gap + label
-        let windowHeight = 10 + okH + gap + movH + gap + cbH + gap + rowH + gap + rowH + gap + themeH + 10
+        let windowHeight = 10 + okH + gap + movH + gap + cityH + gap + cbH + gap + rowH + gap + rowH + gap + themeH + 10
 
         let window = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: windowWidth, height: windowHeight),
@@ -433,7 +404,8 @@ class ChronofaceView: ScreenSaverView {
         // Positions from bottom up
         let okY: CGFloat = 10
         let movY = okY + okH + gap
-        let cbY = movY + movH + gap
+        let cityY = movY + movH + gap
+        let cbY = cityY + cityH + gap
         let row1LabelY = cbY + cbH + gap
         let row1CircleY = row1LabelY + labelHeight + 1
         let row0LabelY = row1CircleY + circleSize + gap
@@ -493,6 +465,23 @@ class ChronofaceView: ScreenSaverView {
         tempCheckbox.state = SettingsStore.showTemperature ? .on : .off
         tempCheckbox.frame = NSRect(x: 160, y: cbY, width: 200, height: cbH)
         contentView.addSubview(tempCheckbox)
+
+        // City popup
+        let cityLabel = NSTextField(labelWithString: "City:")
+        cityLabel.font = NSFont.systemFont(ofSize: 13, weight: .medium)
+        cityLabel.frame = NSRect(x: 20, y: cityY + 3, width: 40, height: 20)
+        contentView.addSubview(cityLabel)
+
+        let cityPopup = NSPopUpButton(frame: NSRect(x: 60, y: cityY, width: 180, height: cityH), pullsDown: false)
+        for city in cities {
+            cityPopup.addItem(withTitle: city.name)
+        }
+        if let idx = cities.firstIndex(where: { $0.name == SettingsStore.selectedCity }) {
+            cityPopup.selectItem(at: idx)
+        }
+        cityPopup.target = self
+        cityPopup.action = #selector(cityChanged(_:))
+        contentView.addSubview(cityPopup)
 
         // Movement label
         let movementLabel = NSTextField(labelWithString: "Movement:")
@@ -555,6 +544,18 @@ class ChronofaceView: ScreenSaverView {
         showTemperature = sender.state == .on
         SettingsStore.showTemperature = showTemperature
         if showTemperature {
+            lastWeatherFetch = nil
+            fetchWeatherIfNeeded()
+        }
+    }
+
+    @objc private func cityChanged(_ sender: NSPopUpButton) {
+        guard let title = sender.selectedItem?.title else { return }
+        SettingsStore.selectedCity = title
+        currentCity = title
+        lastWeatherFetch = nil
+        currentTemperature = nil
+        if showTemperature {
             fetchWeatherIfNeeded()
         }
     }
@@ -573,34 +574,13 @@ class ChronofaceView: ScreenSaverView {
         guard !isFetchingWeather else { return }
         isFetchingWeather = true
 
-        if let lat = cachedLat, let lon = cachedLon {
-            fetchTemperature(lat: lat, lon: lon)
-        } else {
-            fetchLocation()
-        }
-    }
-
-    private func fetchLocation() {
-        guard let url = URL(string: "https://ipwho.is/") else {
+        let selectedName = SettingsStore.selectedCity
+        guard let city = cities.first(where: { $0.name == selectedName }) else {
             isFetchingWeather = false
             return
         }
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
-            guard let self = self, let data = data, error == nil,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let lat = json["latitude"] as? Double,
-                  let lon = json["longitude"] as? Double else {
-                DispatchQueue.main.async { self?.isFetchingWeather = false }
-                return
-            }
-            let city = json["city"] as? String
-            DispatchQueue.main.async {
-                self.cachedLat = lat
-                self.cachedLon = lon
-                self.currentCity = city
-            }
-            self.fetchTemperature(lat: lat, lon: lon)
-        }.resume()
+        currentCity = city.name
+        fetchTemperature(lat: city.lat, lon: city.lon)
     }
 
     private func fetchTemperature(lat: Double, lon: Double) {
@@ -678,8 +658,9 @@ class ChronofaceView: ScreenSaverView {
                  length: radius * 0.48, width: radius * 0.045, tailLength: 0)
         drawHand(ctx: ctx, cx: cx, cy: cy, angle: minuteAngle,
                  length: radius * 0.68, width: radius * 0.045, tailLength: 0)
-        drawSecondHand(ctx: ctx, cx: cx, cy: cy, angle: secondAngle, radius: radius)
         drawCenterDot(ctx: ctx, cx: cx, cy: cy, radius: radius)
+        drawSecondHand(ctx: ctx, cx: cx, cy: cy, angle: secondAngle, radius: radius)
+        drawAxisPin(ctx: ctx, cx: cx, cy: cy, radius: radius)
 
         if showTemperature, let temp = currentTemperature {
             drawTemperature(ctx: ctx, width: width, height: height, text: temp)
@@ -735,7 +716,7 @@ class ChronofaceView: ScreenSaverView {
                 blur: capsuleWidth * 1.2,
                 color: theme.handShadow.cgColor
             )
-            ctx.setStrokeColor(theme.capsuleBase.cgColor)
+            ctx.setStrokeColor(theme.handColor.cgColor)
             ctx.setLineWidth(capsuleWidth)
             ctx.setLineCap(.round)
             ctx.move(to: inner)
@@ -850,7 +831,7 @@ class ChronofaceView: ScreenSaverView {
         let tail = polarToPoint(cx: cx, cy: cy, angle: angle + .pi, r: radius * 0.15)
 
         ctx.setStrokeColor(theme.secondHand.cgColor)
-        ctx.setLineWidth(radius * 0.01)
+        ctx.setLineWidth(radius * 0.009)
         ctx.setLineCap(.round)
         ctx.move(to: tail)
         ctx.addLine(to: tip)
@@ -1068,13 +1049,24 @@ class ChronofaceView: ScreenSaverView {
         ctx.setFillColor(theme.handColor.cgColor)
         ctx.fillEllipse(in: dotRect)
 
-        // Axis pin
-        let pinRadius = radius * 0.012
+        // Second hand color ring
+        let ringRadius = dotRadius * 0.8
+        let ringRect = CGRect(
+            x: cx - ringRadius, y: cy - ringRadius,
+            width: ringRadius * 2, height: ringRadius * 2
+        )
+        ctx.setFillColor(theme.secondHand.cgColor)
+        ctx.fillEllipse(in: ringRect)
+
+    }
+
+    private func drawAxisPin(ctx: CGContext, cx: CGFloat, cy: CGFloat, radius: CGFloat) {
+        let pinRadius = radius * 0.01
         let pinRect = CGRect(
             x: cx - pinRadius, y: cy - pinRadius,
             width: pinRadius * 2, height: pinRadius * 2
         )
-        ctx.setFillColor(NSColor(white: 0.545, alpha: 1.0).cgColor)
+        ctx.setFillColor(NSColor(white: 0.41, alpha: 1.0).cgColor)
         ctx.fillEllipse(in: pinRect)
     }
 }
