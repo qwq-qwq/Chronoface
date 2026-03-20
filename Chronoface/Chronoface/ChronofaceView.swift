@@ -22,6 +22,44 @@ enum ThemeName: String, CaseIterable {
     case noir = "Noir"
 }
 
+// MARK: - Lume color for night mode
+
+enum LumeColorName: String, CaseIterable {
+    case red = "Red"
+    case amber = "Amber"
+    case lavender = "Lavender"
+    case pink = "Pink"
+    case sage = "Sage"
+    case skyBlue = "Sky Blue"
+    case cyan = "Cyan"
+    case peach = "Peach"
+    case green = "Green"
+    case teal = "Teal"
+    case yellow = "Yellow"
+    case mint = "Mint"
+    case iceCyan = "Ice Cyan"
+    case white = "White"
+
+    var color: NSColor {
+        switch self {
+        case .red:      return NSColor(displayP3Red: 0.988, green: 0.012, blue: 0.012, alpha: 1.0)
+        case .amber:    return NSColor(displayP3Red: 1.0, green: 0.533, blue: 0.0, alpha: 1.0)
+        case .lavender: return NSColor(displayP3Red: 0.671, green: 0.635, blue: 0.976, alpha: 1.0)
+        case .pink:     return NSColor(displayP3Red: 1.0, green: 0.596, blue: 0.714, alpha: 1.0)
+        case .sage:     return NSColor(displayP3Red: 0.541, green: 0.796, blue: 0.71, alpha: 1.0)
+        case .skyBlue:  return NSColor(displayP3Red: 0.443, green: 0.847, blue: 0.973, alpha: 1.0)
+        case .cyan:     return NSColor(displayP3Red: 0.004, green: 0.906, blue: 1.0, alpha: 1.0)
+        case .peach:    return NSColor(displayP3Red: 1.0, green: 0.8, blue: 0.604, alpha: 1.0)
+        case .green:    return NSColor(displayP3Red: 0.122, green: 0.98, blue: 0.098, alpha: 1.0)
+        case .teal:     return NSColor(displayP3Red: 0.0, green: 0.98, blue: 0.765, alpha: 1.0)
+        case .yellow:   return NSColor(displayP3Red: 0.996, green: 0.875, blue: 0.267, alpha: 1.0)
+        case .mint:     return NSColor(displayP3Red: 0.588, green: 1.0, blue: 0.655, alpha: 1.0)
+        case .iceCyan:  return NSColor(displayP3Red: 0.451, green: 1.0, blue: 1.0, alpha: 1.0)
+        case .white:    return NSColor(displayP3Red: 0.957, green: 0.957, blue: 0.957, alpha: 1.0)
+        }
+    }
+}
+
 struct Theme {
     let background: NSColor
     let tickColor: NSColor
@@ -290,6 +328,31 @@ enum SettingsStore {
             UserDefaults.standard.set(newValue, forKey: cityKey)
         }
     }
+
+    private static let nightModeKey = "ChronofaceNightMode"
+    private static let lumeColorKey = "ChronofaceLumeColor"
+
+    static var isNightMode: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: nightModeKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: nightModeKey)
+        }
+    }
+
+    static var lumeColor: LumeColorName {
+        get {
+            if let raw = UserDefaults.standard.string(forKey: lumeColorKey),
+               let c = LumeColorName(rawValue: raw) {
+                return c
+            }
+            return .cyan
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: lumeColorKey)
+        }
+    }
 }
 
 // MARK: - City database
@@ -331,6 +394,8 @@ class ChronofaceView: ScreenSaverView {
     private(set) var movement: MovementType
     private(set) var showDate: Bool
     private(set) var showTemperature: Bool
+    private(set) var isNightMode: Bool
+    private(set) var lumeColorName: LumeColorName
 
     // Weather data
     private var currentTemperature: String?
@@ -345,6 +410,8 @@ class ChronofaceView: ScreenSaverView {
         movement = SettingsStore.currentMovement
         showDate = SettingsStore.showDate
         showTemperature = SettingsStore.showTemperature
+        isNightMode = SettingsStore.isNightMode
+        lumeColorName = SettingsStore.lumeColor
         super.init(frame: frame, isPreview: isPreview)
         animationTimeInterval = 1.0 / 30.0
     }
@@ -380,16 +447,19 @@ class ChronofaceView: ScreenSaverView {
     override var configureSheet: NSWindow? {
         let cols = 8
         let circleSize: CGFloat = 36
+        let lumeCircleSize: CGFloat = 20
         let hSpacing: CGFloat = 10
+        let lumeHSpacing: CGFloat = 3
         let labelHeight: CGFloat = 12
         let marginX: CGFloat = 24
-        let gap: CGFloat = 18 // uniform gap between all sections
+        let gap: CGFloat = 18
         let windowWidth = marginX * 2 + CGFloat(cols) * circleSize + CGFloat(cols - 1) * hSpacing
 
-        // Layout from bottom: OK, Movement, City, Checkboxes, Row1, Row0, Theme label
+        // Layout from bottom: OK, Movement, City, Checkboxes, LumeRow, NightMode, Row1, Row0, Theme label
         let okH: CGFloat = 28, movH: CGFloat = 24, cityH: CGFloat = 26, cbH: CGFloat = 20, themeH: CGFloat = 20
-        let rowH = circleSize + 1 + labelHeight // circle + gap + label
-        let windowHeight = 10 + okH + gap + movH + gap + cityH + gap + cbH + gap + rowH + gap + rowH + gap + themeH + 10
+        let nightH: CGFloat = 28, lumeRowH: CGFloat = lumeCircleSize
+        let rowH = circleSize + 1 + labelHeight
+        let windowHeight = 10 + okH + gap + movH + gap + cityH + gap + cbH + gap + lumeRowH + gap + nightH + gap + rowH + gap + rowH + gap + themeH + 10
 
         let window = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: windowWidth, height: windowHeight),
@@ -406,7 +476,9 @@ class ChronofaceView: ScreenSaverView {
         let movY = okY + okH + gap
         let cityY = movY + movH + gap
         let cbY = cityY + cityH + gap
-        let row1LabelY = cbY + cbH + gap
+        let lumeRowY = cbY + cbH + gap
+        let nightY = lumeRowY + lumeRowH + gap
+        let row1LabelY = nightY + nightH + gap
         let row1CircleY = row1LabelY + labelHeight + 1
         let row0LabelY = row1CircleY + circleSize + gap
         let row0CircleY = row0LabelY + labelHeight + 1
@@ -452,6 +524,51 @@ class ChronofaceView: ScreenSaverView {
             nameLabel.alignment = .center
             nameLabel.frame = NSRect(x: x - 6, y: labelYForRow[row], width: circleSize + 12, height: labelHeight)
             contentView.addSubview(nameLabel)
+        }
+
+        // Night mode segmented control (sun/moon)
+        let nightLabel = NSTextField(labelWithString: "Mode:")
+        nightLabel.font = NSFont.systemFont(ofSize: 13, weight: .medium)
+        nightLabel.frame = NSRect(x: 20, y: nightY + 4, width: 50, height: 20)
+        contentView.addSubview(nightLabel)
+
+        let nightSegment = NSSegmentedControl(labels: ["Day", "Night"],
+                                               trackingMode: .selectOne,
+                                               target: self,
+                                               action: #selector(nightModeChanged(_:)))
+        nightSegment.frame = NSRect(x: 75, y: nightY, width: 120, height: nightH)
+        nightSegment.selectedSegment = SettingsStore.isNightMode ? 1 : 0
+        contentView.addSubview(nightSegment)
+
+        // Lume color label
+        let lumeLabel = NSTextField(labelWithString: "Lume:")
+        lumeLabel.font = NSFont.systemFont(ofSize: 13, weight: .medium)
+        lumeLabel.frame = NSRect(x: 20, y: lumeRowY + (lumeCircleSize - 20) / 2, width: 50, height: 20)
+        contentView.addSubview(lumeLabel)
+
+        // Lume color circles
+        let allLumeColors = LumeColorName.allCases
+        let lumeCols = allLumeColors.count
+        let lumeRowWidth = CGFloat(lumeCols) * lumeCircleSize + CGFloat(lumeCols - 1) * lumeHSpacing
+        let lumeStartX = max(75, (windowWidth - lumeRowWidth) / 2)
+
+        for (i, lumeName) in allLumeColors.enumerated() {
+            let x = lumeStartX + CGFloat(i) * (lumeCircleSize + lumeHSpacing)
+            let button = NSButton(frame: NSRect(x: x, y: lumeRowY, width: lumeCircleSize, height: lumeCircleSize))
+            button.bezelStyle = .regularSquare
+            button.isBordered = false
+            button.title = ""
+            button.tag = 1000 + i // offset to distinguish from theme buttons
+            button.target = self
+            button.action = #selector(lumeColorClicked(_:))
+            button.wantsLayer = true
+            button.layer?.cornerRadius = lumeCircleSize / 2
+            button.layer?.backgroundColor = lumeName.color.cgColor
+            button.layer?.borderWidth = lumeName == SettingsStore.lumeColor ? 3 : 1
+            button.layer?.borderColor = lumeName == SettingsStore.lumeColor
+                ? NSColor.controlAccentColor.cgColor
+                : NSColor.separatorColor.cgColor
+            contentView.addSubview(button)
         }
 
         // Show date checkbox
@@ -560,6 +677,34 @@ class ChronofaceView: ScreenSaverView {
         }
     }
 
+    @objc private func nightModeChanged(_ sender: NSSegmentedControl) {
+        isNightMode = sender.selectedSegment == 1
+        SettingsStore.isNightMode = isNightMode
+        setNeedsDisplay(bounds)
+    }
+
+    @objc private func lumeColorClicked(_ sender: NSButton) {
+        let allLumeColors = LumeColorName.allCases
+        let idx = sender.tag - 1000
+        guard idx >= 0, idx < allLumeColors.count else { return }
+        let name = allLumeColors[idx]
+        lumeColorName = name
+        SettingsStore.lumeColor = name
+        setNeedsDisplay(bounds)
+
+        // Update lume circle borders
+        if let contentView = sender.superview {
+            let lumeRadius = CGFloat(10) // lumeCircleSize / 2
+            for case let button as NSButton in contentView.subviews where button.tag >= 1000 && button.layer?.cornerRadius == lumeRadius {
+                let isSelected = button.tag == sender.tag
+                button.layer?.borderWidth = isSelected ? 3 : 1
+                button.layer?.borderColor = isSelected
+                    ? NSColor.controlAccentColor.cgColor
+                    : NSColor.separatorColor.cgColor
+            }
+        }
+    }
+
     @objc private func closeConfigSheet(_ sender: NSButton) {
         guard let window = sender.window else { return }
         window.sheetParent?.endSheet(window)
@@ -616,8 +761,11 @@ class ChronofaceView: ScreenSaverView {
         let radius = min(width, height) * 0.44
 
         // Background
-        ctx.setFillColor(theme.background.cgColor)
+        let effectiveBg = isNightMode ? NSColor.black : theme.background
+        ctx.setFillColor(effectiveBg.cgColor)
         ctx.fill(bounds)
+
+        let lumeColor = lumeColorName.color
 
         let now = Date()
         let calendar = Calendar.current
@@ -642,12 +790,12 @@ class ChronofaceView: ScreenSaverView {
             secondValue = seconds + fractionalSeconds
         }
 
-        drawMinuteTicks(ctx: ctx, cx: cx, cy: cy, radius: radius)
-        drawHourCapsules(ctx: ctx, cx: cx, cy: cy, radius: radius)
-        drawHourNumbers(ctx: ctx, cx: cx, cy: cy, radius: radius)
-        drawMinuteNumbers(ctx: ctx, cx: cx, cy: cy, radius: radius)
+        drawMinuteTicks(ctx: ctx, cx: cx, cy: cy, radius: radius, lumeColor: lumeColor)
+        drawHourCapsules(ctx: ctx, cx: cx, cy: cy, radius: radius, lumeColor: lumeColor)
+        drawHourNumbers(ctx: ctx, cx: cx, cy: cy, radius: radius, lumeColor: lumeColor)
+        drawMinuteNumbers(ctx: ctx, cx: cx, cy: cy, radius: radius, lumeColor: lumeColor)
         if showDate {
-            drawDateWindow(ctx: ctx, cx: cx, cy: cy, radius: radius, date: now)
+            drawDateWindow(ctx: ctx, cx: cx, cy: cy, radius: radius, date: now, lumeColor: lumeColor)
         }
 
         let hourAngle = ((hours + minutes / 60.0) / 12.0) * .pi * 2.0
@@ -655,15 +803,16 @@ class ChronofaceView: ScreenSaverView {
         let secondAngle = (secondValue / 60.0) * .pi * 2.0
 
         drawHand(ctx: ctx, cx: cx, cy: cy, angle: hourAngle,
-                 length: radius * 0.48, width: radius * 0.045, tailLength: 0)
+                 length: radius * 0.48, width: radius * 0.045, tailLength: 0, lumeColor: lumeColor)
         drawHand(ctx: ctx, cx: cx, cy: cy, angle: minuteAngle,
-                 length: radius * 0.68, width: radius * 0.045, tailLength: 0)
+                 length: radius * 0.68, width: radius * 0.045, tailLength: 0, lumeColor: lumeColor)
         drawCenterDot(ctx: ctx, cx: cx, cy: cy, radius: radius)
         drawSecondHand(ctx: ctx, cx: cx, cy: cy, angle: secondAngle, radius: radius)
+        drawSecondHandRing(ctx: ctx, cx: cx, cy: cy, radius: radius)
         drawAxisPin(ctx: ctx, cx: cx, cy: cy, radius: radius)
 
         if showTemperature, let temp = currentTemperature {
-            drawTemperature(ctx: ctx, width: width, height: height, text: temp)
+            drawTemperature(ctx: ctx, width: width, height: height, text: temp, lumeColor: lumeColor)
         }
     }
 
@@ -683,7 +832,7 @@ class ChronofaceView: ScreenSaverView {
 
     // MARK: - Minute tick marks
 
-    private func drawMinuteTicks(ctx: CGContext, cx: CGFloat, cy: CGFloat, radius: CGFloat) {
+    private func drawMinuteTicks(ctx: CGContext, cx: CGFloat, cy: CGFloat, radius: CGFloat, lumeColor: NSColor) {
         for i in 0..<60 {
             if i % 5 == 0 { continue }
 
@@ -691,7 +840,8 @@ class ChronofaceView: ScreenSaverView {
             let inner = polarToPoint(cx: cx, cy: cy, angle: angle, r: radius * 0.88)
             let outer = polarToPoint(cx: cx, cy: cy, angle: angle, r: radius * 0.92)
 
-            ctx.setStrokeColor(theme.tickColor.cgColor)
+            let tickCol = isNightMode ? lumeColor.withAlphaComponent(0.2) : theme.tickColor
+            ctx.setStrokeColor(tickCol.cgColor)
             ctx.setLineWidth(radius * 0.012)
             ctx.setLineCap(.round)
             ctx.move(to: inner)
@@ -702,7 +852,7 @@ class ChronofaceView: ScreenSaverView {
 
     // MARK: - Hour capsule markers (3D raised effect)
 
-    private func drawHourCapsules(ctx: CGContext, cx: CGFloat, cy: CGFloat, radius: CGFloat) {
+    private func drawHourCapsules(ctx: CGContext, cx: CGFloat, cy: CGFloat, radius: CGFloat, lumeColor: NSColor) {
         let capsuleWidth = radius * 0.04
 
         for i in 0..<12 {
@@ -710,38 +860,60 @@ class ChronofaceView: ScreenSaverView {
             let inner = polarToPoint(cx: cx, cy: cy, angle: angle, r: radius * 0.78)
             let outer = polarToPoint(cx: cx, cy: cy, angle: angle, r: radius * 0.92)
 
-            ctx.saveGState()
-            ctx.setShadow(
-                offset: CGSize(width: capsuleWidth * 0.2, height: -capsuleWidth * 0.4),
-                blur: capsuleWidth * 1.2,
-                color: theme.handShadow.cgColor
-            )
-            ctx.setStrokeColor(theme.handColor.cgColor)
-            ctx.setLineWidth(capsuleWidth)
-            ctx.setLineCap(.round)
-            ctx.move(to: inner)
-            ctx.addLine(to: outer)
-            ctx.strokePath()
-            ctx.restoreGState()
+            if isNightMode {
+                // Dark capsule body (barely visible)
+                ctx.setStrokeColor(NSColor(white: 0.12, alpha: 0.6).cgColor)
+                ctx.setLineWidth(capsuleWidth)
+                ctx.setLineCap(.round)
+                ctx.move(to: inner)
+                ctx.addLine(to: outer)
+                ctx.strokePath()
 
-            // Lume strip
-            ctx.setStrokeColor(NSColor(red: 0.78, green: 0.90, blue: 0.72, alpha: 1.0).cgColor)
-            ctx.setLineWidth(capsuleWidth * 0.4)
-            ctx.setLineCap(.round)
-            ctx.move(to: inner)
-            ctx.addLine(to: outer)
-            ctx.strokePath()
+                // Glowing lume strip
+                ctx.saveGState()
+                ctx.setShadow(offset: .zero, blur: capsuleWidth * 3.0, color: lumeColor.withAlphaComponent(0.7).cgColor)
+                ctx.setStrokeColor(lumeColor.cgColor)
+                ctx.setLineWidth(capsuleWidth * 0.4)
+                ctx.setLineCap(.round)
+                ctx.move(to: inner)
+                ctx.addLine(to: outer)
+                ctx.strokePath()
+                ctx.restoreGState()
+            } else {
+                ctx.saveGState()
+                ctx.setShadow(
+                    offset: CGSize(width: capsuleWidth * 0.2, height: -capsuleWidth * 0.4),
+                    blur: capsuleWidth * 1.2,
+                    color: theme.handShadow.cgColor
+                )
+                ctx.setStrokeColor(theme.handColor.cgColor)
+                ctx.setLineWidth(capsuleWidth)
+                ctx.setLineCap(.round)
+                ctx.move(to: inner)
+                ctx.addLine(to: outer)
+                ctx.strokePath()
+                ctx.restoreGState()
+
+                // Lume strip
+                ctx.setStrokeColor(NSColor(red: 0.78, green: 0.90, blue: 0.72, alpha: 1.0).cgColor)
+                ctx.setLineWidth(capsuleWidth * 0.4)
+                ctx.setLineCap(.round)
+                ctx.move(to: inner)
+                ctx.addLine(to: outer)
+                ctx.strokePath()
+            }
         }
     }
 
     // MARK: - Hour numbers
 
-    private func drawHourNumbers(ctx: CGContext, cx: CGFloat, cy: CGFloat, radius: CGFloat) {
+    private func drawHourNumbers(ctx: CGContext, cx: CGFloat, cy: CGFloat, radius: CGFloat, lumeColor: NSColor) {
         let fontSize = radius * 0.14
         let font = NSFont(name: "Futura-Bold", size: fontSize) ?? NSFont.boldSystemFont(ofSize: fontSize)
+        let numColor = isNightMode ? lumeColor : theme.numberColor
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
-            .foregroundColor: theme.numberColor
+            .foregroundColor: numColor
         ]
 
         let numbers = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
@@ -753,18 +925,27 @@ class ChronofaceView: ScreenSaverView {
             let text = "\(num)"
             let size = (text as NSString).size(withAttributes: attributes)
             let drawPoint = CGPoint(x: pos.x - size.width / 2.0, y: pos.y - size.height / 2.0)
+
+            if isNightMode {
+                // Glow behind text
+                ctx.saveGState()
+                ctx.setShadow(offset: .zero, blur: fontSize * 0.4, color: lumeColor.withAlphaComponent(0.6).cgColor)
+                (text as NSString).draw(at: drawPoint, withAttributes: attributes)
+                ctx.restoreGState()
+            }
             (text as NSString).draw(at: drawPoint, withAttributes: attributes)
         }
     }
 
     // MARK: - Minute numbers (outer ring)
 
-    private func drawMinuteNumbers(ctx: CGContext, cx: CGFloat, cy: CGFloat, radius: CGFloat) {
+    private func drawMinuteNumbers(ctx: CGContext, cx: CGFloat, cy: CGFloat, radius: CGFloat, lumeColor: NSColor) {
         let fontSize = radius * 0.065
         let font = NSFont(name: "Futura-Medium", size: fontSize) ?? NSFont.systemFont(ofSize: fontSize, weight: .medium)
+        let minNumColor = isNightMode ? lumeColor.withAlphaComponent(0.25) : theme.numberColor
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
-            .foregroundColor: theme.numberColor
+            .foregroundColor: minNumColor
         ]
 
         let numbers = [60, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
@@ -783,7 +964,10 @@ class ChronofaceView: ScreenSaverView {
     // MARK: - Clock hands with 3D effect
 
     private func drawHand(ctx: CGContext, cx: CGFloat, cy: CGFloat,
-                          angle: CGFloat, length: CGFloat, width: CGFloat, tailLength: CGFloat) {
+                          angle:
+
+                          CGFloat, length: CGFloat, width: CGFloat, tailLength: CGFloat,
+                          lumeColor: NSColor) {
         let radius = min(bounds.width, bounds.height) * 0.44
         let neckLength = radius * 0.1
         let neckStart = polarToPoint(cx: cx, cy: cy, angle: angle, r: 0)
@@ -791,36 +975,73 @@ class ChronofaceView: ScreenSaverView {
         let bodyStart = neckEnd
         let tip = polarToPoint(cx: cx, cy: cy, angle: angle, r: length)
 
-        // Main hand body
-        ctx.saveGState()
-        ctx.setShadow(
-            offset: CGSize(width: width * 0.3, height: -width * 0.5),
-            blur: width * 1.5,
-            color: theme.handShadow.cgColor
-        )
-        ctx.setStrokeColor(theme.handColor.cgColor)
-        ctx.setLineWidth(width)
-        ctx.setLineCap(.round)
-        ctx.move(to: bodyStart)
-        ctx.addLine(to: tip)
-        ctx.strokePath()
-        ctx.restoreGState()
+        if isNightMode {
+            // Dark hand body (barely visible)
+            ctx.setStrokeColor(NSColor(white: 0.12, alpha: 0.6).cgColor)
+            ctx.setLineWidth(width)
+            ctx.setLineCap(.round)
+            ctx.move(to: bodyStart)
+            ctx.addLine(to: tip)
+            ctx.strokePath()
 
-        // Neck (thin line from pivot, drawn after body so it's on top of body's shadow)
-        ctx.setStrokeColor(theme.handColor.cgColor)
-        ctx.setLineWidth(width * 0.30)
-        ctx.setLineCap(.round)
-        ctx.move(to: neckStart)
-        ctx.addLine(to: neckEnd)
-        ctx.strokePath()
+            // Dark neck
+            ctx.setStrokeColor(NSColor(white: 0.12, alpha: 0.6).cgColor)
+            ctx.setLineWidth(width * 0.30)
+            ctx.setLineCap(.round)
+            ctx.move(to: neckStart)
+            ctx.addLine(to: neckEnd)
+            ctx.strokePath()
 
-        // Lume strip
-        ctx.setStrokeColor(NSColor(red: 0.78, green: 0.90, blue: 0.72, alpha: 1.0).cgColor)
-        ctx.setLineWidth(width * 0.4)
-        ctx.setLineCap(.round)
-        ctx.move(to: bodyStart)
-        ctx.addLine(to: tip)
-        ctx.strokePath()
+            // Glowing lume strip
+            ctx.saveGState()
+            ctx.setShadow(offset: .zero, blur: width * 2.5, color: lumeColor.withAlphaComponent(0.7).cgColor)
+            ctx.setStrokeColor(lumeColor.cgColor)
+            ctx.setLineWidth(width * 0.45)
+            ctx.setLineCap(.round)
+            ctx.move(to: bodyStart)
+            ctx.addLine(to: tip)
+            ctx.strokePath()
+            ctx.restoreGState()
+
+            // Bright core
+            ctx.setStrokeColor(lumeColor.cgColor)
+            ctx.setLineWidth(width * 0.3)
+            ctx.setLineCap(.round)
+            ctx.move(to: bodyStart)
+            ctx.addLine(to: tip)
+            ctx.strokePath()
+        } else {
+            // Main hand body
+            ctx.saveGState()
+            ctx.setShadow(
+                offset: CGSize(width: width * 0.3, height: -width * 0.5),
+                blur: width * 1.5,
+                color: theme.handShadow.cgColor
+            )
+            ctx.setStrokeColor(theme.handColor.cgColor)
+            ctx.setLineWidth(width)
+            ctx.setLineCap(.round)
+            ctx.move(to: bodyStart)
+            ctx.addLine(to: tip)
+            ctx.strokePath()
+            ctx.restoreGState()
+
+            // Neck
+            ctx.setStrokeColor(theme.handColor.cgColor)
+            ctx.setLineWidth(width * 0.30)
+            ctx.setLineCap(.round)
+            ctx.move(to: neckStart)
+            ctx.addLine(to: neckEnd)
+            ctx.strokePath()
+
+            // Lume strip
+            ctx.setStrokeColor(NSColor(red: 0.78, green: 0.90, blue: 0.72, alpha: 1.0).cgColor)
+            ctx.setLineWidth(width * 0.4)
+            ctx.setLineCap(.round)
+            ctx.move(to: bodyStart)
+            ctx.addLine(to: tip)
+            ctx.strokePath()
+        }
     }
 
     // MARK: - Second hand
@@ -830,7 +1051,8 @@ class ChronofaceView: ScreenSaverView {
         let tip = polarToPoint(cx: cx, cy: cy, angle: angle, r: radius * 0.78)
         let tail = polarToPoint(cx: cx, cy: cy, angle: angle + .pi, r: radius * 0.15)
 
-        ctx.setStrokeColor(theme.secondHand.cgColor)
+        let secColor = isNightMode ? NSColor(white: 0.25, alpha: 0.6) : theme.secondHand
+        ctx.setStrokeColor(secColor.cgColor)
         ctx.setLineWidth(radius * 0.009)
         ctx.setLineCap(.round)
         ctx.move(to: tail)
@@ -840,7 +1062,7 @@ class ChronofaceView: ScreenSaverView {
 
     // MARK: - Date window at 3 o'clock
 
-    private func drawDateWindow(ctx: CGContext, cx: CGFloat, cy: CGFloat, radius: CGFloat, date: Date) {
+    private func drawDateWindow(ctx: CGContext, cx: CGFloat, cy: CGFloat, radius: CGFloat, date: Date, lumeColor: NSColor) {
         let day = Calendar.current.component(.day, from: date)
         let text = "\(day)"
 
@@ -852,6 +1074,25 @@ class ChronofaceView: ScreenSaverView {
         let windowX = cx + radius * 0.38 - windowW / 2
         let windowY = cy - windowH / 2
         let cornerR = radius * 0.012
+
+        // Night mode: glowing date text, no window background
+        if isNightMode {
+            let glowAttrs: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: lumeColor
+            ]
+            let size = (text as NSString).size(withAttributes: glowAttrs)
+            let textPoint = CGPoint(
+                x: windowX + (windowW - size.width) / 2,
+                y: windowY + (windowH - size.height) / 2
+            )
+            ctx.saveGState()
+            ctx.setShadow(offset: .zero, blur: fontSize * 0.4, color: lumeColor.withAlphaComponent(0.6).cgColor)
+            (text as NSString).draw(at: textPoint, withAttributes: glowAttrs)
+            ctx.restoreGState()
+            (text as NSString).draw(at: textPoint, withAttributes: glowAttrs)
+            return
+        }
 
         // Perceived brightness using ITU-R BT.601 luma formula:
         // Y = R×0.299 + G×0.587 + B×0.114
@@ -1000,23 +1241,47 @@ class ChronofaceView: ScreenSaverView {
 
     // MARK: - Temperature display
 
-    private func drawTemperature(ctx: CGContext, width: CGFloat, height: CGFloat, text: String) {
+    private func drawTemperature(ctx: CGContext, width: CGFloat, height: CGFloat, text: String, lumeColor: NSColor) {
         let minSide = min(width, height)
         let margin = minSide * 0.05
         let rightEdge = width - margin
 
+        let tempFontSize = minSide * 0.032
+        let tempFont = NSFont(name: "Futura-Medium", size: tempFontSize) ?? NSFont.systemFont(ofSize: tempFontSize, weight: .medium)
+
+        if isNightMode {
+            let tempAttrs: [NSAttributedString.Key: Any] = [
+                .font: tempFont,
+                .foregroundColor: lumeColor.withAlphaComponent(0.7)
+            ]
+            let tempSize = (text as NSString).size(withAttributes: tempAttrs)
+            let tempPoint = CGPoint(x: rightEdge - tempSize.width, y: margin)
+            ctx.saveGState()
+            ctx.setShadow(offset: .zero, blur: tempFontSize * 0.3, color: lumeColor.withAlphaComponent(0.5).cgColor)
+            (text as NSString).draw(at: tempPoint, withAttributes: tempAttrs)
+            ctx.restoreGState()
+
+            if let city = currentCity {
+                let cityFontSize = minSide * 0.018
+                let cityFont = NSFont(name: "Futura-Medium", size: cityFontSize) ?? NSFont.systemFont(ofSize: cityFontSize, weight: .medium)
+                let cityAttrs: [NSAttributedString.Key: Any] = [
+                    .font: cityFont,
+                    .foregroundColor: lumeColor.withAlphaComponent(0.4)
+                ]
+                let citySize = (city as NSString).size(withAttributes: cityAttrs)
+                let cityY = margin + tempSize.height + minSide * 0.004
+                (city as NSString).draw(at: CGPoint(x: rightEdge - citySize.width, y: cityY), withAttributes: cityAttrs)
+            }
+            return
+        }
+
         // Perceived brightness (ITU-R BT.601 luma: Y = R×0.299 + G×0.587 + B×0.114).
-        // On dark backgrounds text needs higher opacity (0.7) to stay readable;
-        // on light backgrounds lower opacity (0.5) keeps it subtle.
         var bgBrightness: CGFloat = 1.0
         if let rgb = theme.background.usingColorSpace(.deviceRGB) {
             bgBrightness = rgb.redComponent * 0.299 + rgb.greenComponent * 0.587 + rgb.blueComponent * 0.114
         }
         let alpha: CGFloat = bgBrightness < 0.4 ? 0.7 : 0.5
 
-        // Temperature (bottom)
-        let tempFontSize = minSide * 0.032
-        let tempFont = NSFont(name: "Futura-Medium", size: tempFontSize) ?? NSFont.systemFont(ofSize: tempFontSize, weight: .medium)
         let tempAttrs: [NSAttributedString.Key: Any] = [
             .font: tempFont,
             .foregroundColor: theme.numberColor.withAlphaComponent(alpha)
@@ -1046,18 +1311,21 @@ class ChronofaceView: ScreenSaverView {
             x: cx - dotRadius, y: cy - dotRadius,
             width: dotRadius * 2, height: dotRadius * 2
         )
-        ctx.setFillColor(theme.handColor.cgColor)
+        let dotColor = isNightMode ? NSColor(white: 0.15, alpha: 1.0) : theme.handColor
+        ctx.setFillColor(dotColor.cgColor)
         ctx.fillEllipse(in: dotRect)
+    }
 
-        // Second hand color ring
+    private func drawSecondHandRing(ctx: CGContext, cx: CGFloat, cy: CGFloat, radius: CGFloat) {
+        let dotRadius = radius * 0.035
         let ringRadius = dotRadius * 0.8
         let ringRect = CGRect(
             x: cx - ringRadius, y: cy - ringRadius,
             width: ringRadius * 2, height: ringRadius * 2
         )
-        ctx.setFillColor(theme.secondHand.cgColor)
+        let ringColor = isNightMode ? NSColor(white: 0.12, alpha: 1.0) : theme.secondHand
+        ctx.setFillColor(ringColor.cgColor)
         ctx.fillEllipse(in: ringRect)
-
     }
 
     private func drawAxisPin(ctx: CGContext, cx: CGFloat, cy: CGFloat, radius: CGFloat) {
