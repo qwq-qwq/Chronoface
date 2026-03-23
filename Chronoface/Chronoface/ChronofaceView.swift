@@ -353,6 +353,21 @@ enum SettingsStore {
             UserDefaults.standard.set(newValue.rawValue, forKey: lumeColorKey)
         }
     }
+
+    private static let glowIntensityKey = "ChronofaceGlowIntensity"
+
+    /// 0.0 … 1.0, default 0.7
+    static var glowIntensity: CGFloat {
+        get {
+            if UserDefaults.standard.object(forKey: glowIntensityKey) == nil {
+                return 0.7
+            }
+            return CGFloat(UserDefaults.standard.double(forKey: glowIntensityKey))
+        }
+        set {
+            UserDefaults.standard.set(Double(newValue), forKey: glowIntensityKey)
+        }
+    }
 }
 
 // MARK: - City database
@@ -396,6 +411,7 @@ class ChronofaceView: ScreenSaverView {
     private(set) var showTemperature: Bool
     private(set) var isNightMode: Bool
     private(set) var lumeColorName: LumeColorName
+    private(set) var glowIntensity: CGFloat
 
     // Weather data
     private var currentTemperature: String?
@@ -412,6 +428,7 @@ class ChronofaceView: ScreenSaverView {
         showTemperature = SettingsStore.showTemperature
         isNightMode = SettingsStore.isNightMode
         lumeColorName = SettingsStore.lumeColor
+        glowIntensity = SettingsStore.glowIntensity
         super.init(frame: frame, isPreview: isPreview)
         animationTimeInterval = 1.0 / 30.0
     }
@@ -455,11 +472,11 @@ class ChronofaceView: ScreenSaverView {
         let gap: CGFloat = 18
         let windowWidth = marginX * 2 + CGFloat(cols) * circleSize + CGFloat(cols - 1) * hSpacing
 
-        // Layout from bottom: OK, Movement, City, Checkboxes, LumeRow, NightMode, Row1, Row0, Theme label
+        // Layout from bottom: OK, Movement, City, Checkboxes, LumeRow, GlowSlider, NightMode, Row1, Row0, Theme label
         let okH: CGFloat = 28, movH: CGFloat = 24, cityH: CGFloat = 26, cbH: CGFloat = 20, themeH: CGFloat = 20
-        let nightH: CGFloat = 28, lumeRowH: CGFloat = lumeCircleSize
+        let nightH: CGFloat = 28, lumeRowH: CGFloat = lumeCircleSize, glowH: CGFloat = 24
         let rowH = circleSize + 1 + labelHeight
-        let windowHeight = 10 + okH + gap + movH + gap + cityH + gap + cbH + gap + lumeRowH + gap + nightH + gap + rowH + gap + rowH + gap + themeH + 10
+        let windowHeight = 10 + okH + gap + movH + gap + cityH + gap + cbH + gap + lumeRowH + gap + glowH + gap + nightH + gap + rowH + gap + rowH + gap + themeH + 10
 
         let window = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: windowWidth, height: windowHeight),
@@ -477,7 +494,8 @@ class ChronofaceView: ScreenSaverView {
         let cityY = movY + movH + gap
         let cbY = cityY + cityH + gap
         let lumeRowY = cbY + cbH + gap
-        let nightY = lumeRowY + lumeRowH + gap
+        let glowY = lumeRowY + lumeRowH + gap
+        let nightY = glowY + glowH + gap
         let row1LabelY = nightY + nightH + gap
         let row1CircleY = row1LabelY + labelHeight + 1
         let row0LabelY = row1CircleY + circleSize + gap
@@ -570,6 +588,18 @@ class ChronofaceView: ScreenSaverView {
                 : NSColor.separatorColor.cgColor
             contentView.addSubview(button)
         }
+
+        // Glow intensity slider
+        let glowLabel = NSTextField(labelWithString: "Glow:")
+        glowLabel.font = NSFont.systemFont(ofSize: 13, weight: .medium)
+        glowLabel.frame = NSRect(x: 20, y: glowY + 2, width: 50, height: 20)
+        contentView.addSubview(glowLabel)
+
+        let glowSlider = NSSlider(value: Double(SettingsStore.glowIntensity),
+                                   minValue: 0.0, maxValue: 1.0,
+                                   target: self, action: #selector(glowIntensityChanged(_:)))
+        glowSlider.frame = NSRect(x: 75, y: glowY, width: windowWidth - 95, height: glowH)
+        contentView.addSubview(glowSlider)
 
         // Show date checkbox
         let dateCheckbox = NSButton(checkboxWithTitle: "Show date", target: self, action: #selector(showDateChanged(_:)))
@@ -675,6 +705,12 @@ class ChronofaceView: ScreenSaverView {
         if showTemperature {
             fetchWeatherIfNeeded()
         }
+    }
+
+    @objc private func glowIntensityChanged(_ sender: NSSlider) {
+        glowIntensity = CGFloat(sender.doubleValue)
+        SettingsStore.glowIntensity = glowIntensity
+        setNeedsDisplay(bounds)
     }
 
     @objc private func nightModeChanged(_ sender: NSSegmentedControl) {
@@ -871,7 +907,7 @@ class ChronofaceView: ScreenSaverView {
 
                 // Glowing lume strip
                 ctx.saveGState()
-                ctx.setShadow(offset: .zero, blur: capsuleWidth * 3.0, color: lumeColor.withAlphaComponent(0.7).cgColor)
+                ctx.setShadow(offset: .zero, blur: capsuleWidth * 3.0 * glowIntensity, color: lumeColor.withAlphaComponent(0.7 * glowIntensity).cgColor)
                 ctx.setStrokeColor(lumeColor.cgColor)
                 ctx.setLineWidth(capsuleWidth * 0.4)
                 ctx.setLineCap(.round)
@@ -929,7 +965,7 @@ class ChronofaceView: ScreenSaverView {
             if isNightMode {
                 // Glow behind text
                 ctx.saveGState()
-                ctx.setShadow(offset: .zero, blur: fontSize * 0.4, color: lumeColor.withAlphaComponent(0.6).cgColor)
+                ctx.setShadow(offset: .zero, blur: fontSize * 0.4 * glowIntensity, color: lumeColor.withAlphaComponent(0.6 * glowIntensity).cgColor)
                 (text as NSString).draw(at: drawPoint, withAttributes: attributes)
                 ctx.restoreGState()
             }
@@ -994,7 +1030,7 @@ class ChronofaceView: ScreenSaverView {
 
             // Glowing lume strip
             ctx.saveGState()
-            ctx.setShadow(offset: .zero, blur: width * 2.5, color: lumeColor.withAlphaComponent(0.7).cgColor)
+            ctx.setShadow(offset: .zero, blur: width * 2.5 * glowIntensity, color: lumeColor.withAlphaComponent(0.7 * glowIntensity).cgColor)
             ctx.setStrokeColor(lumeColor.cgColor)
             ctx.setLineWidth(width * 0.45)
             ctx.setLineCap(.round)
@@ -1087,7 +1123,7 @@ class ChronofaceView: ScreenSaverView {
                 y: windowY + (windowH - size.height) / 2
             )
             ctx.saveGState()
-            ctx.setShadow(offset: .zero, blur: fontSize * 0.4, color: lumeColor.withAlphaComponent(0.6).cgColor)
+            ctx.setShadow(offset: .zero, blur: fontSize * 0.4 * glowIntensity, color: lumeColor.withAlphaComponent(0.6 * glowIntensity).cgColor)
             (text as NSString).draw(at: textPoint, withAttributes: glowAttrs)
             ctx.restoreGState()
             (text as NSString).draw(at: textPoint, withAttributes: glowAttrs)
@@ -1257,7 +1293,7 @@ class ChronofaceView: ScreenSaverView {
             let tempSize = (text as NSString).size(withAttributes: tempAttrs)
             let tempPoint = CGPoint(x: rightEdge - tempSize.width, y: margin)
             ctx.saveGState()
-            ctx.setShadow(offset: .zero, blur: tempFontSize * 0.3, color: lumeColor.withAlphaComponent(0.5).cgColor)
+            ctx.setShadow(offset: .zero, blur: tempFontSize * 0.3 * glowIntensity, color: lumeColor.withAlphaComponent(0.5 * glowIntensity).cgColor)
             (text as NSString).draw(at: tempPoint, withAttributes: tempAttrs)
             ctx.restoreGState()
 
