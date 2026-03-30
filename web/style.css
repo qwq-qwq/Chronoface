@@ -1,0 +1,386 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    overflow: hidden;
+    background: #000;
+    cursor: none;
+}
+
+body.active {
+    cursor: default;
+}
+
+#clock {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: block;
+}
+
+/* Settings button */
+
+#settings-btn {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+body.active #settings-btn {
+    opacity: 0.5;
+}
+
+#settings-btn:hover {
+    opacity: 1 !important;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+#settings-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: #fff;
+}
+
+/* Overlay */
+
+#overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 15;
+    display: none;
+}
+
+#overlay.visible {
+    display: block;
+}
+
+/* Settings panel */
+
+#panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    height: 100vh;
+    background: rgba(18, 18, 20, 0.92);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 20;
+    overflow-y: auto;
+    padding: 28px 20px;
+    color: #ddd;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+#panel.open {
+    transform: translateX(0);
+}
+
+#panel h2 {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 24px;
+    letter-spacing: 0.3px;
+    color: #fff;
+}
+
+#panel section {
+    margin-bottom: 18px;
+}
+
+#panel section > label:first-child {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #777;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+/* Tabs */
+
+.tab-bar {
+    display: flex;
+    gap: 0;
+    margin-bottom: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tab-bar .tab {
+    flex: 1;
+    padding: 8px 4px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #666;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+    font-family: inherit;
+}
+
+.tab-bar .tab:hover {
+    color: #aaa;
+}
+
+.tab-bar .tab.active {
+    color: #fff;
+    border-bottom-color: #fff;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+#appearance-tabs {
+    margin-bottom: 18px;
+}
+
+#panel .auto-section {
+    margin-bottom: 10px;
+}
+
+#panel .auto-section > label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #888;
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+#panel .auto-section input[type="checkbox"] {
+    margin: 0;
+    width: 13px;
+    height: 13px;
+}
+
+/* Color circles */
+
+#theme-grid,
+#lume-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.color-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s;
+}
+
+.color-swatch:hover {
+    transform: scale(1.12);
+}
+
+.color-swatch.selected {
+    border-color: #fff;
+}
+
+.lume-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s;
+}
+
+.lume-swatch:hover {
+    transform: scale(1.15);
+}
+
+.lume-swatch.selected {
+    border-color: #fff;
+}
+
+/* Button groups */
+
+.btn-group {
+    display: flex;
+    gap: 4px;
+}
+
+.btn-group button {
+    flex: 1;
+    padding: 6px 4px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    color: #999;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.btn-group button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ccc;
+}
+
+.btn-group button.active {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Range slider */
+
+input[type="range"] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 2px;
+    outline: none;
+    margin-top: 4px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    border: none;
+    cursor: pointer;
+}
+
+#glow-value {
+    float: right;
+    font-size: 11px;
+    color: #999;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* Select */
+
+#city-select {
+    width: 100%;
+    padding: 7px 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    color: #ddd;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+}
+
+#city-select option {
+    background: #1a1a1e;
+}
+
+/* Toggles */
+
+#panel .toggle-group {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+#panel .toggle-group > label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #bbb;
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: 0;
+    margin: 0;
+}
+
+#panel .toggle-group input[type="checkbox"] {
+    margin: 0;
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+}
+
+
+/* GitHub link */
+
+#github-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #555;
+    text-decoration: none;
+    font-size: 12px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    transition: color 0.2s;
+}
+
+#github-link:hover {
+    color: #aaa;
+}
+
+#github-link svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+    flex-shrink: 0;
+}
+
+/* Mobile */
+
+@media (max-width: 480px) {
+    #panel {
+        width: 100%;
+    }
+}
+
+@media (hover: none) {
+    body {
+        cursor: default !important;
+    }
+
+    #settings-btn {
+        opacity: 0.5 !important;
+    }
+}
