@@ -217,6 +217,7 @@ let canvas, ctx;
 let nightMode = false;
 let theme, lumeCol, glow;
 const FONT = '"Futura", "Jost", "Century Gothic", sans-serif';
+const IS_BLINK = !!(window.chrome || (navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Safari/')));
 
 // ─── Geometry helper ───────────────────────────────────────────
 
@@ -481,6 +482,9 @@ const drawDateWindow = (cx, cy, R, date) => {
     const wY = cy - wH / 2;
     const cr = R * 0.012;
 
+    const tx = wX + wW / 2;
+    const ty = wY + wH / 2 + (IS_BLINK ? fs * 0.06 : 0);
+
     if (nightMode) {
         ctx.save();
         ctx.shadowBlur = fs * 0.4 * glow;
@@ -489,13 +493,13 @@ const drawDateWindow = (cx, cy, R, date) => {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = css(lumeCol);
-        ctx.fillText(text, wX + wW / 2, wY + wH / 2);
+        ctx.fillText(text, tx, ty);
         ctx.restore();
         ctx.fillStyle = css(lumeCol);
         ctx.font = `500 ${fs}px ${FONT}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(text, wX + wW / 2, wY + wH / 2);
+        ctx.fillText(text, tx, ty);
         return;
     }
 
@@ -597,7 +601,7 @@ const drawDateWindow = (cx, cy, R, date) => {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = textColor;
-    ctx.fillText(text, wX + wW / 2, wY + wH / 2);
+    ctx.fillText(text, tx, ty);
 };
 
 const drawTemperature = (W, H, text) => {
