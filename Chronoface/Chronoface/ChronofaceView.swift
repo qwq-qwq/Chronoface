@@ -60,6 +60,102 @@ enum LumeColorName: String, CaseIterable {
     }
 }
 
+// MARK: - Night mode option
+
+enum NightModeOption: String, CaseIterable {
+    case day = "Day"
+    case night = "Night"
+    case auto = "Auto"
+}
+
+// MARK: - Sunrise / Sunset calculator
+//
+// Реализация на основе упрощённого алгоритма NOAA (National Oceanic and Atmospheric Administration).
+// Источник: https://gml.noaa.gov/grad/solcalc/solareqns.PDF
+//
+// Общий принцип:
+//   Солнце восходит и заходит, когда его центр находится на 90.833° от зенита
+//   (90° + поправка 0.833° на атмосферную рефракцию и видимый радиус диска).
+//   Зная склонение Солнца (зависит от дня года) и широту наблюдателя,
+//   можно вычислить часовой угол — время до/после солнечного полудня,
+//   когда Солнце пересекает этот порог.
+//
+// Шаги алгоритма:
+//   1. gamma (дробный год) — переводим день года в угол (радианы).
+//      Используется как аргумент для всех дальнейших тригонометрических рядов.
+//
+//   2. Equation of Time (уравнение времени, минуты) — поправка между
+//      средним солнечным временем и истинным. Учитывает эллиптичность
+//      орбиты Земли и наклон оси. Отклонение ±16 минут в течение года.
+//
+//   3. Solar declination (склонение Солнца, радианы) — угол между
+//      направлением на Солнце и плоскостью экватора. Меняется от −23.44°
+//      (зимнее солнцестояние) до +23.44° (летнее). Определяет длину дня.
+//
+//   4. Hour angle (часовой угол, градусы) — угловое расстояние от солнечного
+//      полудня до момента восхода/заката. Вычисляется через cos(HA):
+//        cos(HA) = cos(90.833°) / (cos(lat) · cos(decl)) − tan(lat) · tan(decl)
+//      Если |cos(HA)| > 1 — солнце не заходит (полярный день) или не восходит
+//      (полярная ночь); в этом случае используем fallback.
+//
+//   5. Sunrise / Sunset (часы UTC) — солнечный полдень смещается на ±HA:
+//        sunrise = (720 − 4·(lon + HA) − eqTime) / 60
+//        sunset  = (720 − 4·(lon − HA) − eqTime) / 60
+//      где 720 = полдень в минутах, 4 мин/градус = скорость вращения Земли.
+//
+//   6. Локальное время — прибавляем смещение часового пояса (включая DST).
+//
+// Точность: ±2 минуты для широт < 65°. Достаточно для переключения режимов.
+
+/// Returns (sunrise, sunset) as fractional hours in the city's local time for a given date and coordinates.
+private func solarTimes(lat: Double, lon: Double, tz: TimeZone, date: Date = Date()) -> (sunrise: Double, sunset: Double) {
+    var calendar = Calendar.current
+    calendar.timeZone = tz
+    let dayOfYear = Double(calendar.ordinality(of: .day, in: .year, for: date) ?? 1)
+
+    // Шаг 1: Дробный год (радианы) — позиция Земли на орбите
+    let gamma = 2.0 * .pi / 365.0 * (dayOfYear - 1)
+
+    // Шаг 2: Уравнение времени (минуты) — разница между средним и истинным солнечным временем.
+    // Коэффициенты — ряд Фурье, аппроксимирующий эффект эксцентриситета орбиты и наклона оси.
+    let eqTime = 229.18 * (0.000075
+        + 0.001868 * cos(gamma)
+        - 0.032077 * sin(gamma)
+        - 0.014615 * cos(2 * gamma)
+        - 0.040849 * sin(2 * gamma))
+
+    // Шаг 3: Склонение Солнца (радианы) — угол Солнца над/под экватором.
+    // Аналогичный ряд Фурье; максимум ≈ +0.409 рад (23.44°) в июне.
+    let decl = 0.006918
+        - 0.399912 * cos(gamma)
+        + 0.070257 * sin(gamma)
+        - 0.006758 * cos(2 * gamma)
+        + 0.000907 * sin(2 * gamma)
+        - 0.002697 * cos(3 * gamma)
+        + 0.00148  * sin(3 * gamma)
+
+    let latRad = lat * .pi / 180.0
+
+    // Шаг 4: Часовой угол — при каком угле от полудня Солнце на горизонте (90.833°).
+    let cosHA = (cos(90.833 * .pi / 180.0) / (cos(latRad) * cos(decl))) - tan(latRad) * tan(decl)
+
+    // Полярный день/ночь — |cosHA| > 1, восход/закат не существует
+    guard cosHA >= -1.0 && cosHA <= 1.0 else {
+        return (sunrise: 6.0, sunset: 22.0)
+    }
+
+    let ha = acos(cosHA) * 180.0 / .pi  // градусы
+
+    // Шаг 5–6: Время восхода/заката (UTC → локальное время города).
+    // 720 мин = полдень UTC, 4 мин на градус долготы.
+    let tzOffset = Double(tz.secondsFromGMT(for: date)) / 3600.0
+
+    let sunrise = (720.0 - 4.0 * (lon + ha) - eqTime) / 60.0 + tzOffset
+    let sunset  = (720.0 - 4.0 * (lon - ha) - eqTime) / 60.0 + tzOffset
+
+    return (sunrise: sunrise, sunset: sunset)
+}
+
 struct Theme {
     let background: NSColor
     let tickColor: NSColor
@@ -330,14 +426,23 @@ enum SettingsStore {
     }
 
     private static let nightModeKey = "ChronofaceNightMode"
+    private static let nightModeOptionKey = "ChronofaceNightModeOption"
     private static let lumeColorKey = "ChronofaceLumeColor"
 
-    static var isNightMode: Bool {
+    static var nightModeOption: NightModeOption {
         get {
-            return UserDefaults.standard.bool(forKey: nightModeKey)
+            if let raw = UserDefaults.standard.string(forKey: nightModeOptionKey),
+               let opt = NightModeOption(rawValue: raw) {
+                return opt
+            }
+            // Migrate from old bool setting
+            if UserDefaults.standard.object(forKey: nightModeKey) != nil {
+                return UserDefaults.standard.bool(forKey: nightModeKey) ? .night : .day
+            }
+            return .day
         }
         set {
-            UserDefaults.standard.set(newValue, forKey: nightModeKey)
+            UserDefaults.standard.set(newValue.rawValue, forKey: nightModeOptionKey)
         }
     }
 
@@ -376,29 +481,30 @@ struct CityInfo {
     let name: String
     let lat: Double
     let lon: Double
+    let tz: TimeZone
 }
 
 let cities: [CityInfo] = [
-    CityInfo(name: "Kyiv", lat: 50.4501, lon: 30.5234),
-    CityInfo(name: "Lviv", lat: 49.8397, lon: 24.0297),
-    CityInfo(name: "London", lat: 51.5074, lon: -0.1278),
-    CityInfo(name: "New York", lat: 40.7128, lon: -74.0060),
-    CityInfo(name: "Los Angeles", lat: 34.0522, lon: -118.2437),
-    CityInfo(name: "Paris", lat: 48.8566, lon: 2.3522),
-    CityInfo(name: "Berlin", lat: 52.5200, lon: 13.4050),
-    CityInfo(name: "Tokyo", lat: 35.6762, lon: 139.6503),
-    CityInfo(name: "Dubai", lat: 25.2048, lon: 55.2708),
-    CityInfo(name: "Istanbul", lat: 41.0082, lon: 28.9784),
-    CityInfo(name: "Bangkok", lat: 13.7563, lon: 100.5018),
-    CityInfo(name: "Singapore", lat: 1.3521, lon: 103.8198),
-    CityInfo(name: "Sydney", lat: -33.8688, lon: 151.2093),
-    CityInfo(name: "Toronto", lat: 43.6532, lon: -79.3832),
-    CityInfo(name: "Barcelona", lat: 41.3874, lon: 2.1686),
-    CityInfo(name: "Rome", lat: 41.9028, lon: 12.4964),
-    CityInfo(name: "Beijing", lat: 39.9042, lon: 116.4074),
-    CityInfo(name: "Seoul", lat: 37.5665, lon: 126.9780),
-    CityInfo(name: "Tel Aviv", lat: 32.0853, lon: 34.7818),
-    CityInfo(name: "Buenos Aires", lat: -34.6037, lon: -58.3816),
+    CityInfo(name: "Kyiv",         lat: 50.4501,  lon: 30.5234,   tz: TimeZone(identifier: "Europe/Kyiv")!),
+    CityInfo(name: "Lviv",         lat: 49.8397,  lon: 24.0297,   tz: TimeZone(identifier: "Europe/Kyiv")!),
+    CityInfo(name: "London",       lat: 51.5074,  lon: -0.1278,   tz: TimeZone(identifier: "Europe/London")!),
+    CityInfo(name: "New York",     lat: 40.7128,  lon: -74.0060,  tz: TimeZone(identifier: "America/New_York")!),
+    CityInfo(name: "Los Angeles",  lat: 34.0522,  lon: -118.2437, tz: TimeZone(identifier: "America/Los_Angeles")!),
+    CityInfo(name: "Paris",        lat: 48.8566,  lon: 2.3522,    tz: TimeZone(identifier: "Europe/Paris")!),
+    CityInfo(name: "Berlin",       lat: 52.5200,  lon: 13.4050,   tz: TimeZone(identifier: "Europe/Berlin")!),
+    CityInfo(name: "Tokyo",        lat: 35.6762,  lon: 139.6503,  tz: TimeZone(identifier: "Asia/Tokyo")!),
+    CityInfo(name: "Dubai",        lat: 25.2048,  lon: 55.2708,   tz: TimeZone(identifier: "Asia/Dubai")!),
+    CityInfo(name: "Istanbul",     lat: 41.0082,  lon: 28.9784,   tz: TimeZone(identifier: "Europe/Istanbul")!),
+    CityInfo(name: "Bangkok",      lat: 13.7563,  lon: 100.5018,  tz: TimeZone(identifier: "Asia/Bangkok")!),
+    CityInfo(name: "Singapore",    lat: 1.3521,   lon: 103.8198,  tz: TimeZone(identifier: "Asia/Singapore")!),
+    CityInfo(name: "Sydney",       lat: -33.8688, lon: 151.2093,  tz: TimeZone(identifier: "Australia/Sydney")!),
+    CityInfo(name: "Toronto",      lat: 43.6532,  lon: -79.3832,  tz: TimeZone(identifier: "America/Toronto")!),
+    CityInfo(name: "Barcelona",    lat: 41.3874,  lon: 2.1686,    tz: TimeZone(identifier: "Europe/Madrid")!),
+    CityInfo(name: "Rome",         lat: 41.9028,  lon: 12.4964,   tz: TimeZone(identifier: "Europe/Rome")!),
+    CityInfo(name: "Beijing",      lat: 39.9042,  lon: 116.4074,  tz: TimeZone(identifier: "Asia/Shanghai")!),
+    CityInfo(name: "Seoul",        lat: 37.5665,  lon: 126.9780,  tz: TimeZone(identifier: "Asia/Seoul")!),
+    CityInfo(name: "Tel Aviv",     lat: 32.0853,  lon: 34.7818,   tz: TimeZone(identifier: "Asia/Tel_Aviv")!),
+    CityInfo(name: "Buenos Aires", lat: -34.6037, lon: -58.3816,  tz: TimeZone(identifier: "America/Argentina/Buenos_Aires")!),
 ]
 
 // MARK: - Main screensaver view
@@ -409,9 +515,27 @@ class ChronofaceView: ScreenSaverView {
     private(set) var movement: MovementType
     private(set) var showDate: Bool
     private(set) var showTemperature: Bool
-    private(set) var isNightMode: Bool
+    private(set) var nightModeOption: NightModeOption
     private(set) var lumeColorName: LumeColorName
     private(set) var glowIntensity: CGFloat
+
+    /// Effective night mode: resolves `.auto` using sunrise/sunset for the selected city.
+    private var isNightMode: Bool {
+        switch nightModeOption {
+        case .day:   return false
+        case .night: return true
+        case .auto:
+            let cityName = SettingsStore.selectedCity
+            guard let city = cities.first(where: { $0.name == cityName }) else { return false }
+            let times = solarTimes(lat: city.lat, lon: city.lon, tz: city.tz)
+            var calendar = Calendar.current
+            calendar.timeZone = city.tz
+            let now = Date()
+            let hour = Double(calendar.component(.hour, from: now))
+                     + Double(calendar.component(.minute, from: now)) / 60.0
+            return hour < times.sunrise || hour >= times.sunset
+        }
+    }
 
     // Weather data
     private var currentTemperature: String?
@@ -426,7 +550,7 @@ class ChronofaceView: ScreenSaverView {
         movement = SettingsStore.currentMovement
         showDate = SettingsStore.showDate
         showTemperature = SettingsStore.showTemperature
-        isNightMode = SettingsStore.isNightMode
+        nightModeOption = SettingsStore.nightModeOption
         lumeColorName = SettingsStore.lumeColor
         glowIntensity = SettingsStore.glowIntensity
         super.init(frame: frame, isPreview: isPreview)
@@ -550,12 +674,12 @@ class ChronofaceView: ScreenSaverView {
         nightLabel.frame = NSRect(x: 20, y: nightY + 4, width: 50, height: 20)
         contentView.addSubview(nightLabel)
 
-        let nightSegment = NSSegmentedControl(labels: ["Day", "Night"],
+        let nightSegment = NSSegmentedControl(labels: ["Day", "Night", "Auto"],
                                                trackingMode: .selectOne,
                                                target: self,
                                                action: #selector(nightModeChanged(_:)))
-        nightSegment.frame = NSRect(x: 75, y: nightY, width: 120, height: nightH)
-        nightSegment.selectedSegment = SettingsStore.isNightMode ? 1 : 0
+        nightSegment.frame = NSRect(x: 75, y: nightY, width: 180, height: nightH)
+        nightSegment.selectedSegment = NightModeOption.allCases.firstIndex(of: SettingsStore.nightModeOption) ?? 0
         contentView.addSubview(nightSegment)
 
         // Lume color label
@@ -714,8 +838,11 @@ class ChronofaceView: ScreenSaverView {
     }
 
     @objc private func nightModeChanged(_ sender: NSSegmentedControl) {
-        isNightMode = sender.selectedSegment == 1
-        SettingsStore.isNightMode = isNightMode
+        let allOptions = NightModeOption.allCases
+        let idx = sender.selectedSegment
+        guard idx >= 0, idx < allOptions.count else { return }
+        nightModeOption = allOptions[idx]
+        SettingsStore.nightModeOption = nightModeOption
         setNeedsDisplay(bounds)
     }
 
@@ -931,7 +1058,7 @@ class ChronofaceView: ScreenSaverView {
                 ctx.restoreGState()
 
                 // Lume strip
-                ctx.setStrokeColor(NSColor(red: 0.78, green: 0.90, blue: 0.72, alpha: 1.0).cgColor)
+                ctx.setStrokeColor(NSColor(red: 0.78, green: 0.90, blue: 0.72, alpha: 0.35).cgColor)
                 ctx.setLineWidth(capsuleWidth * 0.4)
                 ctx.setLineCap(.round)
                 ctx.move(to: inner)
@@ -1005,7 +1132,7 @@ class ChronofaceView: ScreenSaverView {
                           CGFloat, length: CGFloat, width: CGFloat, tailLength: CGFloat,
                           lumeColor: NSColor) {
         let radius = min(bounds.width, bounds.height) * 0.44
-        let neckLength = radius * 0.1
+        let neckLength = radius * 0.085
         let neckStart = polarToPoint(cx: cx, cy: cy, angle: angle, r: 0)
         let neckEnd = polarToPoint(cx: cx, cy: cy, angle: angle, r: neckLength)
         let bodyStart = neckEnd
@@ -1071,7 +1198,7 @@ class ChronofaceView: ScreenSaverView {
             ctx.strokePath()
 
             // Lume strip
-            ctx.setStrokeColor(NSColor(red: 0.78, green: 0.90, blue: 0.72, alpha: 1.0).cgColor)
+            ctx.setStrokeColor(NSColor(red: 0.78, green: 0.90, blue: 0.72, alpha: 0.35).cgColor)
             ctx.setLineWidth(width * 0.4)
             ctx.setLineCap(.round)
             ctx.move(to: bodyStart)
