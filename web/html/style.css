@@ -175,25 +175,24 @@ body.active #settings-btn {
 }
 
 #panel-close {
-    width: 28px;
-    height: 28px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 6px;
-    color: #666;
-    font-size: 16px;
+    width: 24px;
+    height: 24px;
+    background: none;
+    border: none;
+    border-radius: 4px;
+    color: #555;
+    font-size: 18px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s;
     line-height: 1;
+    padding: 0;
 }
 
 #panel-close:hover {
-    background: rgba(255, 255, 255, 0.12);
     color: #aaa;
-    border-color: rgba(255, 255, 255, 0.15);
 }
 
 #panel section {

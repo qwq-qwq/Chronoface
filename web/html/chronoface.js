@@ -724,10 +724,13 @@ const initUI = () => {
     const openPanel  = () => { panel.classList.add('open'); overlay.classList.add('visible'); };
     const closePanel = () => { panel.classList.remove('open'); overlay.classList.remove('visible'); };
 
+    const panelClose = document.getElementById('panel-close');
+
     settingsBtn.addEventListener('click', () => {
         panel.classList.contains('open') ? closePanel() : openPanel();
     });
     overlay.addEventListener('click', closePanel);
+    if (panelClose) panelClose.addEventListener('click', closePanel);
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closePanel();
