@@ -898,6 +898,26 @@ const init = () => {
     document.body.classList.add('active');
     setTimeout(() => { document.body.classList.remove('active'); }, 3000);
 
+    // Show settings hint on first visit
+    const hint = document.getElementById('settings-hint');
+    if (hint && !localStorage.getItem('cf-hint-seen')) {
+        setTimeout(() => {
+            hint.classList.add('visible');
+            setTimeout(() => {
+                hint.classList.remove('visible');
+                localStorage.setItem('cf-hint-seen', '1');
+            }, 4000);
+        }, 1500);
+    }
+
+    const settingsBtn = document.getElementById('settings-btn');
+    if (settingsBtn && hint) {
+        settingsBtn.addEventListener('click', () => {
+            hint.classList.remove('visible');
+            localStorage.setItem('cf-hint-seen', '1');
+        });
+    }
+
     requestAnimationFrame(animate);
 };
 

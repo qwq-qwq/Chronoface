@@ -1,0 +1,1664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chronoface — Luxury Analog Screensaver for macOS</title>
+    <meta name="description" content="Transform your Mac into a Swiss-inspired timepiece. Luminescent night mode, 16 curated dial themes, live weather — all in a stunning screensaver.">
+    <meta property="og:title" content="Chronoface — Luxury Analog Screensaver">
+    <meta property="og:description" content="Swiss-inspired analog clock screensaver for macOS with luminescent night mode">
+    <meta property="og:url" content="https://chronoface.perek.rest">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#08080a">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,700;1,6..96,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23080808'/><circle cx='50' cy='50' r='38' fill='none' stroke='%2300E8FF' stroke-width='2'/><line x1='50' y1='50' x2='50' y2='22' stroke='%2300E8FF' stroke-width='3' stroke-linecap='round'/><line x1='50' y1='50' x2='68' y2='50' stroke='%2300E8FF' stroke-width='2' stroke-linecap='round'/></svg>">
+    <style>
+        :root {
+            --bg: #08080a;
+            --surface: #111114;
+            --surface-raised: #19191e;
+            --accent: #00d4e8;
+            --accent-glow: rgba(0, 212, 232, 0.35);
+            --gold: #c8a97e;
+            --gold-dim: #9a7d58;
+            --text: #e8e4df;
+            --text-muted: #76767e;
+            --text-dim: #45454d;
+            --serif: 'Bodoni Moda', 'Didot', 'Georgia', serif;
+            --sans: 'Outfit', 'Avenir', sans-serif;
+            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            font-size: 16px;
+            scroll-behavior: smooth;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--sans);
+            font-weight: 300;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        ::selection {
+            background: rgba(0, 212, 232, 0.25);
+            color: #fff;
+        }
+
+        /* ─── Noise overlay ──────────────────────────── */
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            pointer-events: none;
+            opacity: 0.022;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            background-size: 256px;
+        }
+
+        /* ─── Navigation ─────────────────────────────── */
+
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 24px 48px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(to bottom, rgba(8,8,10,0.9) 0%, transparent 100%);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: background 0.4s;
+        }
+
+        .nav-logo {
+            font-family: var(--serif);
+            font-size: 1.25rem;
+            font-weight: 400;
+            letter-spacing: 0.08em;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .nav-logo span {
+            color: var(--accent);
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 36px;
+        }
+
+        .nav-links a {
+            font-size: 0.8rem;
+            font-weight: 400;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text);
+        }
+
+        .nav-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 24px;
+            background: transparent;
+            border: 1px solid var(--gold-dim);
+            color: var(--gold) !important;
+            font-size: 0.75rem !important;
+            font-weight: 500 !important;
+            letter-spacing: 0.14em !important;
+            text-transform: uppercase;
+            text-decoration: none;
+            transition: all 0.35s var(--ease-out);
+        }
+
+        .nav-cta:hover {
+            background: var(--gold);
+            color: var(--bg) !important;
+            border-color: var(--gold);
+        }
+
+        /* ─── Hero ────────────────────────────────────── */
+
+        .hero {
+            position: relative;
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            align-items: center;
+            padding: 0 48px;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -40%;
+            right: -10%;
+            width: 70vw;
+            height: 70vw;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0,212,232,0.04) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-text {
+            position: relative;
+            z-index: 2;
+            padding-right: 40px;
+        }
+
+        .hero-eyebrow {
+            font-size: 0.7rem;
+            font-weight: 500;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 28px;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeUp 0.8s var(--ease-out) 0.3s forwards;
+        }
+
+        .hero-title {
+            font-family: var(--serif);
+            font-size: clamp(3rem, 5.5vw, 5.5rem);
+            font-weight: 400;
+            line-height: 1.05;
+            letter-spacing: -0.01em;
+            margin-bottom: 32px;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeUp 1s var(--ease-out) 0.5s forwards;
+        }
+
+        .hero-title em {
+            font-style: italic;
+            color: var(--accent);
+        }
+
+        .hero-subtitle {
+            font-size: 1.05rem;
+            font-weight: 300;
+            line-height: 1.7;
+            color: var(--text-muted);
+            max-width: 440px;
+            margin-bottom: 48px;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeUp 0.8s var(--ease-out) 0.7s forwards;
+        }
+
+        .hero-actions {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeUp 0.8s var(--ease-out) 0.9s forwards;
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 16px 36px;
+            background: var(--accent);
+            color: var(--bg);
+            font-family: var(--sans);
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.35s var(--ease-out);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%);
+            transform: translateX(-100%);
+            transition: transform 0.6s var(--ease-out);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px var(--accent-glow);
+        }
+
+        .btn-primary:hover::after {
+            transform: translateX(100%);
+        }
+
+        .btn-ghost {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px 0;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-family: var(--sans);
+            font-size: 0.8rem;
+            font-weight: 400;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .btn-ghost:hover {
+            color: var(--text);
+        }
+
+        .btn-ghost svg {
+            width: 18px;
+            height: 18px;
+            transition: transform 0.3s var(--ease-out);
+        }
+
+        .btn-ghost:hover svg {
+            transform: translateX(4px);
+        }
+
+        .hero-clock {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            animation: fadeIn 1.5s var(--ease-out) 0.4s forwards;
+        }
+
+        .hero-clock canvas {
+            width: min(42vw, 520px);
+            height: min(42vw, 520px);
+        }
+
+        /* clock glow ring */
+        .hero-clock::after {
+            content: '';
+            position: absolute;
+            width: 80%;
+            height: 80%;
+            border-radius: 50%;
+            border: 1px solid rgba(0,212,232,0.06);
+            pointer-events: none;
+            animation: pulseRing 4s ease-in-out infinite;
+        }
+
+        /* ─── Divider ──────────────────────────────────── */
+
+        .divider {
+            width: 100%;
+            padding: 0 48px;
+            overflow: hidden;
+        }
+
+        .divider-line {
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--text-dim), transparent);
+        }
+
+        /* ─── Section commons ────────────────────────── */
+
+        section {
+            padding: 120px 48px;
+        }
+
+        .section-eyebrow {
+            font-size: 0.65rem;
+            font-weight: 500;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-family: var(--serif);
+            font-size: clamp(2rem, 3.5vw, 3.5rem);
+            font-weight: 400;
+            line-height: 1.15;
+            margin-bottom: 20px;
+        }
+
+        .section-desc {
+            font-size: 1rem;
+            font-weight: 300;
+            color: var(--text-muted);
+            max-width: 520px;
+            line-height: 1.7;
+        }
+
+        /* reveal animation for sections */
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.9s var(--ease-out), transform 0.9s var(--ease-out);
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ─── Features ───────────────────────────────── */
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2px;
+            padding: 0 48px 120px;
+        }
+
+        .feature-card {
+            position: relative;
+            padding: 48px 32px;
+            background: var(--surface);
+            overflow: hidden;
+            transition: background 0.4s;
+        }
+
+        .feature-card:hover {
+            background: var(--surface-raised);
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-number {
+            font-family: var(--serif);
+            font-size: 3rem;
+            font-weight: 400;
+            color: var(--text-dim);
+            line-height: 1;
+            margin-bottom: 32px;
+            transition: color 0.4s;
+        }
+
+        .feature-card:hover .feature-number {
+            color: var(--accent);
+        }
+
+        .feature-name {
+            font-size: 1.05rem;
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+
+        .feature-desc {
+            font-size: 0.85rem;
+            font-weight: 300;
+            color: var(--text-muted);
+            line-height: 1.65;
+        }
+
+        /* ─── Night Mode Section ─────────────────────── */
+
+        .night-section {
+            position: relative;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+            background: var(--bg);
+            overflow: hidden;
+        }
+
+        .night-section::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .night-clock-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .night-clock-wrap canvas {
+            width: min(36vw, 440px);
+            height: min(36vw, 440px);
+        }
+
+        .night-text {
+            position: relative;
+            z-index: 2;
+        }
+
+        .lume-colors {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 32px;
+        }
+
+        .lume-dot {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.08);
+            cursor: pointer;
+            transition: all 0.3s var(--ease-out);
+            position: relative;
+        }
+
+        .lume-dot:hover {
+            transform: scale(1.25);
+            border-color: rgba(255,255,255,0.25);
+        }
+
+        .lume-dot.active {
+            border-color: rgba(255,255,255,0.5);
+            box-shadow: 0 0 16px var(--dot-glow, rgba(0,212,232,0.5));
+        }
+
+        /* ─── Themes Section ─────────────────────────── */
+
+        .themes-section {
+            text-align: center;
+        }
+
+        .themes-section .section-desc {
+            margin: 0 auto 60px;
+        }
+
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        .theme-cell {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 4px;
+            cursor: pointer;
+            overflow: hidden;
+            transition: all 0.4s var(--ease-out);
+        }
+
+        .theme-cell:hover {
+            transform: scale(1.08);
+            z-index: 2;
+            border-radius: 8px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+        }
+
+        .theme-cell .theme-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 8px;
+            font-size: 0.6rem;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: all 0.3s var(--ease-out);
+            background: linear-gradient(transparent, rgba(0,0,0,0.5));
+        }
+
+        .theme-cell:hover .theme-label {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ─── Cities Section ─────────────────────────── */
+
+        .cities-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+        }
+
+        .cities-text {
+            position: relative;
+        }
+
+        .city-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0;
+            margin-top: 40px;
+        }
+
+        .city-tag {
+            padding: 10px 20px;
+            font-size: 0.8rem;
+            font-weight: 300;
+            color: var(--text-dim);
+            border: 1px solid rgba(255,255,255,0.04);
+            transition: all 0.3s;
+        }
+
+        .city-tag:hover {
+            color: var(--text);
+            background: var(--surface);
+            border-color: rgba(255,255,255,0.08);
+        }
+
+        .weather-display {
+            text-align: center;
+        }
+
+        .weather-temp {
+            font-family: var(--serif);
+            font-size: 7rem;
+            font-weight: 400;
+            line-height: 1;
+            color: var(--text-dim);
+        }
+
+        .weather-city {
+            font-size: 0.75rem;
+            font-weight: 500;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-top: 12px;
+        }
+
+        .weather-note {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-top: 8px;
+        }
+
+        /* ─── Movement Section ───────────────────────── */
+
+        .movement-section {
+            text-align: center;
+            background: var(--surface);
+        }
+
+        .movement-section .section-desc {
+            margin: 0 auto 60px;
+        }
+
+        .movement-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            max-width: 840px;
+            margin: 0 auto;
+        }
+
+        .movement-card {
+            padding: 56px 36px;
+            background: var(--bg);
+            text-align: center;
+            transition: background 0.4s;
+        }
+
+        .movement-card:hover {
+            background: var(--surface-raised);
+        }
+
+        .movement-card h3 {
+            font-family: var(--serif);
+            font-size: 1.6rem;
+            font-weight: 400;
+            margin-bottom: 16px;
+        }
+
+        .movement-card p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            font-weight: 300;
+        }
+
+        .movement-canvas {
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 24px;
+            display: block;
+        }
+
+        /* ─── CTA Section ────────────────────────────── */
+
+        .cta-section {
+            text-align: center;
+            padding: 160px 48px;
+            position: relative;
+        }
+
+        .cta-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(200,169,126,0.06) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .cta-title {
+            font-family: var(--serif);
+            font-size: clamp(2.5rem, 4.5vw, 4.5rem);
+            font-weight: 400;
+            line-height: 1.1;
+            margin-bottom: 24px;
+        }
+
+        .cta-title em {
+            font-style: italic;
+            color: var(--gold);
+        }
+
+        .cta-subtitle {
+            font-size: 1rem;
+            font-weight: 300;
+            color: var(--text-muted);
+            margin-bottom: 48px;
+        }
+
+        .cta-actions {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+        }
+
+        .cta-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 48px;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            letter-spacing: 0.06em;
+        }
+
+        .cta-badge svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        /* ─── Footer ─────────────────────────────────── */
+
+        footer {
+            padding: 48px 48px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-top: 1px solid rgba(255,255,255,0.04);
+        }
+
+        footer .foot-logo {
+            font-family: var(--serif);
+            font-size: 1rem;
+            font-weight: 400;
+            letter-spacing: 0.08em;
+            color: var(--text-dim);
+        }
+
+        footer .foot-links {
+            display: flex;
+            gap: 28px;
+        }
+
+        footer .foot-links a {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-decoration: none;
+            letter-spacing: 0.06em;
+            transition: color 0.3s;
+        }
+
+        footer .foot-links a:hover {
+            color: var(--text-muted);
+        }
+
+        /* ─── Animations ─────────────────────────────── */
+
+        @keyframes fadeUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulseRing {
+            0%, 100% { transform: scale(1); opacity: 0.4; }
+            50% { transform: scale(1.04); opacity: 0.8; }
+        }
+
+        /* ─── Responsive ─────────────────────────────── */
+
+        @media (max-width: 1024px) {
+            nav { padding: 20px 28px; }
+            section { padding: 80px 28px; }
+            .hero { padding: 0 28px; }
+            .features { padding: 0 28px 80px; grid-template-columns: repeat(2, 1fr); }
+            .theme-grid { grid-template-columns: repeat(4, 1fr); }
+            .divider { padding: 0 28px; }
+        }
+
+        @media (max-width: 768px) {
+            nav { padding: 16px 20px; }
+            .nav-links a:not(.nav-cta) { display: none; }
+            section { padding: 64px 20px; }
+            .hero {
+                grid-template-columns: 1fr;
+                text-align: center;
+                padding: 120px 20px 60px;
+                min-height: auto;
+            }
+            .hero-text { padding-right: 0; order: 1; }
+            .hero-subtitle { margin-left: auto; margin-right: auto; }
+            .hero-actions { justify-content: center; flex-wrap: wrap; }
+            .hero-clock {
+                order: 0;
+                margin-bottom: 40px;
+            }
+            .hero-clock canvas {
+                width: 280px;
+                height: 280px;
+            }
+            .features { grid-template-columns: 1fr; padding: 0 20px 64px; }
+            .night-section { grid-template-columns: 1fr; text-align: center; gap: 40px; }
+            .night-clock-wrap canvas { width: 280px; height: 280px; }
+            .night-text { order: 1; }
+            .lume-colors { justify-content: center; }
+            .themes-section .theme-grid { grid-template-columns: repeat(4, 1fr); }
+            .cities-section {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+            .city-list { justify-content: center; }
+            .weather-display { order: -1; }
+            .movement-grid { grid-template-columns: 1fr; }
+            footer { flex-direction: column; gap: 20px; text-align: center; }
+            .divider { padding: 0 20px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <a class="nav-logo" href="#">Chrono<span>face</span></a>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#themes">Themes</a>
+            <a href="index.html">Live Demo</a>
+            <a class="nav-cta" href="#download">Download</a>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <div class="hero">
+        <div class="hero-text">
+            <p class="hero-eyebrow">macOS Screensaver</p>
+            <h1 class="hero-title">Time,<br><em>reimagined.</em></h1>
+            <p class="hero-subtitle">Transform your Mac display into a Swiss-inspired timepiece. Luminescent night mode, curated dial themes, and live weather — distilled into the most beautiful screensaver you've ever seen.</p>
+            <div class="hero-actions">
+                <a class="btn-primary" href="https://github.com/qwq-qwq/Chronoface/releases/latest/download/Chronoface.saver.zip">
+                    Download Free
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v9m0 0l-3.5-3.5M8 11l3.5-3.5M3 14h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </a>
+                <a class="btn-ghost" href="index.html">
+                    Try Live Demo
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14m-6-6l6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </a>
+            </div>
+        </div>
+        <div class="hero-clock">
+            <canvas id="hero-canvas"></canvas>
+        </div>
+    </div>
+
+    <!-- Divider -->
+    <div class="divider"><div class="divider-line"></div></div>
+
+    <!-- Features -->
+    <section id="features" style="padding-bottom: 0;">
+        <div class="reveal">
+            <p class="section-eyebrow">Crafted Details</p>
+            <h2 class="section-title">Every pixel,<br>considered.</h2>
+        </div>
+    </section>
+
+    <div class="features">
+        <div class="feature-card reveal">
+            <div class="feature-number">16</div>
+            <h3 class="feature-name">Dial Themes</h3>
+            <p class="feature-desc">From turquoise to noir — each palette inspired by iconic watch dial colours, with shadows and highlights for authentic depth.</p>
+        </div>
+        <div class="feature-card reveal">
+            <div class="feature-number">14</div>
+            <h3 class="feature-name">Lume Colors</h3>
+            <p class="feature-desc">Luminescent night mode with 14 glow colours and adjustable intensity. Designed to feel like Super-LumiNova in the dark.</p>
+        </div>
+        <div class="feature-card reveal">
+            <div class="feature-number">20</div>
+            <h3 class="feature-name">World Cities</h3>
+            <p class="feature-desc">Live timezone and weather for 20 cities. Auto sunrise/sunset detection switches between day and night modes seamlessly.</p>
+        </div>
+        <div class="feature-card reveal">
+            <div class="feature-number">3</div>
+            <h3 class="feature-name">Movements</h3>
+            <p class="feature-desc">Quartz precision, mechanical sweep, or digital tick — choose the second-hand motion that matches your temperament.</p>
+        </div>
+    </div>
+
+    <!-- Night Mode Section -->
+    <section class="night-section" id="nightmode">
+        <div class="night-clock-wrap reveal">
+            <canvas id="night-canvas"></canvas>
+        </div>
+        <div class="night-text reveal">
+            <p class="section-eyebrow">Luminescence</p>
+            <h2 class="section-title">The dial<br>comes alive.</h2>
+            <p class="section-desc">Inspired by the glow of Super-LumiNova on high-end watch dials. When night falls — automatically or on command — every element transforms with adjustable luminescence.</p>
+            <div class="lume-colors" id="lume-palette"></div>
+        </div>
+    </section>
+
+    <!-- Divider -->
+    <div class="divider"><div class="divider-line"></div></div>
+
+    <!-- Themes Section -->
+    <section class="themes-section reveal" id="themes">
+        <p class="section-eyebrow">Colour Palette</p>
+        <h2 class="section-title">16 curated dials.</h2>
+        <p class="section-desc">Each theme is a considered palette with matched hand shadows, tick marks, and numerals. Dark dials glow. Light dials cast shadows.</p>
+        <div class="theme-grid" id="theme-palette"></div>
+    </section>
+
+    <!-- Divider -->
+    <div class="divider"><div class="divider-line"></div></div>
+
+    <!-- Cities Section -->
+    <section class="cities-section" id="cities">
+        <div class="cities-text reveal">
+            <p class="section-eyebrow">World Time</p>
+            <h2 class="section-title">Global,<br>at a glance.</h2>
+            <p class="section-desc">Live temperature and correct timezone for 20 cities. The auto mode calculates sunrise and sunset with NOAA solar algorithms to toggle night mode perfectly.</p>
+            <div class="city-list" id="city-list"></div>
+        </div>
+        <div class="weather-display reveal">
+            <div class="weather-temp" id="weather-temp">--°</div>
+            <div class="weather-city">Kyiv</div>
+            <div class="weather-note">Live from Open-Meteo API</div>
+        </div>
+    </section>
+
+    <!-- Divider -->
+    <div class="divider"><div class="divider-line"></div></div>
+
+    <!-- Movement Section -->
+    <section class="movement-section" id="movement">
+        <div class="reveal">
+            <p class="section-eyebrow">Calibre</p>
+            <h2 class="section-title">Three hearts.</h2>
+            <p class="section-desc">The second hand tells the story. Choose the beat that matches you.</p>
+        </div>
+        <div class="movement-grid">
+            <div class="movement-card reveal">
+                <canvas class="movement-canvas" id="mv-quartz"></canvas>
+                <h3>Quartz</h3>
+                <p>Crisp, decisive one-second jumps. Each tick marks an exact moment in time.</p>
+            </div>
+            <div class="movement-card reveal">
+                <canvas class="movement-canvas" id="mv-mechanical"></canvas>
+                <h3>Mechanical</h3>
+                <p>8 beats per second — the measured heartbeat of a fine Swiss mechanical calibre.</p>
+            </div>
+            <div class="movement-card reveal">
+                <canvas class="movement-canvas" id="mv-digital"></canvas>
+                <h3>Digital</h3>
+                <p>Silky-smooth continuous sweep. The precision of quartz crystal, rendered at 60fps.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section" id="download">
+        <div class="reveal">
+            <h2 class="cta-title">Make every<br>idle moment<br><em>beautiful.</em></h2>
+            <p class="cta-subtitle">Free for macOS. No subscriptions, no tracking, no ads.</p>
+            <div class="cta-actions">
+                <a class="btn-primary" href="https://github.com/qwq-qwq/Chronoface/releases/latest/download/Chronoface.saver.zip">
+                    Download for macOS
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v9m0 0l-3.5-3.5M8 11l3.5-3.5M3 14h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </a>
+                <a class="btn-ghost" href="https://github.com/qwq-qwq/Chronoface" target="_blank" rel="noopener">
+                    View Source
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14m-6-6l6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </a>
+            </div>
+            <div class="cta-badge">
+                <svg viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                Requires macOS 13+
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="foot-logo">Chronoface</div>
+        <div class="foot-links">
+            <a href="https://github.com/qwq-qwq/Chronoface" target="_blank" rel="noopener">GitHub</a>
+            <a href="index.html">Demo</a>
+        </div>
+    </footer>
+
+    <script>
+    (() => {
+    'use strict';
+
+    // ─── Color helpers ──────────────────────────────
+    const C = (r, g, b, a = 1) => ({ r, g, b, a });
+    const css = (c) => `rgba(${(c.r*255)|0},${(c.g*255)|0},${(c.b*255)|0},${c.a})`;
+    const withAlpha = (c, a) => ({ ...c, a });
+    const gray = (v, a = 1) => C(v, v, v, a);
+
+    const LUME_COLORS = {
+        red:      C(0.988, 0.012, 0.012),
+        amber:    C(1.0, 0.533, 0.0),
+        lavender: C(0.671, 0.635, 0.976),
+        pink:     C(1.0, 0.596, 0.714),
+        sage:     C(0.541, 0.796, 0.71),
+        skyBlue:  C(0.443, 0.847, 0.973),
+        cyan:     C(0.004, 0.906, 1.0),
+        peach:    C(1.0, 0.8, 0.604),
+        green:    C(0.122, 0.98, 0.098),
+        teal:     C(0.0, 0.98, 0.765),
+        yellow:   C(0.996, 0.875, 0.267),
+        mint:     C(0.588, 1.0, 0.655),
+        iceCyan:  C(0.451, 1.0, 1.0),
+        white:    C(0.957, 0.957, 0.957)
+    };
+
+    const LUME_ORDER = ['red','amber','lavender','pink','sage','skyBlue','cyan','peach','green','teal','yellow','mint','iceCyan','white'];
+
+    const THEMES = {
+        white:      { bg: C(1.0, 1.0, 1.0),       name: 'White' },
+        turquoise:  { bg: C(0.69, 0.89, 0.89),    name: 'Turquoise' },
+        glacier:    { bg: C(0.659, 0.718, 0.749),  name: 'Glacier' },
+        ocean:      { bg: C(0.055, 0.125, 0.271),  name: 'Ocean' },
+        tennis:     { bg: C(0.0, 0.451, 0.263),    name: 'Tennis' },
+        signalBlue: { bg: C(0.0, 0.624, 0.851),    name: 'Signal Blue' },
+        salmon:     { bg: C(0.890, 0.694, 0.561),  name: 'Salmon' },
+        yellow:     { bg: C(0.949, 0.745, 0.0),    name: 'Yellow' },
+        beige:      { bg: C(0.878, 0.808, 0.624),  name: 'Beige' },
+        pistachio:  { bg: C(0.714, 0.769, 0.639),  name: 'Pistachio' },
+        lavender:   { bg: C(0.765, 0.788, 0.898),  name: 'Lavender' },
+        rose:       { bg: C(0.898, 0.757, 0.796),  name: 'Rose' },
+        skyBlue:    { bg: C(0.733, 0.851, 0.941),  name: 'Sky Blue' },
+        cream:      { bg: C(0.859, 0.851, 0.827),  name: 'Cream' },
+        slate:      { bg: C(0.275, 0.278, 0.290),  name: 'Slate' },
+        noir:       { bg: C(0.055, 0.055, 0.059),  name: 'Noir' }
+    };
+
+    const THEME_ORDER = ['white','turquoise','glacier','ocean','tennis','signalBlue','salmon','yellow','beige','pistachio','lavender','rose','skyBlue','cream','slate','noir'];
+
+    const CITIES = ['Kyiv','Lviv','London','New York','Los Angeles','Paris','Berlin','Tokyo','Dubai','Istanbul','Bangkok','Singapore','Sydney','Toronto','Barcelona','Rome','Beijing','Seoul','Tel Aviv','Buenos Aires'];
+
+    const FONT = '"Futura", "Jost", "Century Gothic", sans-serif';
+
+    // ─── Geometry ───────────────────────────────────
+    const polar = (cx, cy, angle, r) => {
+        const a = angle - Math.PI / 2;
+        return { x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r };
+    };
+
+    // ─── Draw clock ─────────────────────────────────
+    function drawClock(canvas, isNight, lumeCol, glowInt) {
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        const size = Math.min(rect.width, rect.height);
+
+        canvas.width = size * dpr;
+        canvas.height = size * dpr;
+        ctx.scale(dpr, dpr);
+
+        const cx = size / 2;
+        const cy = size / 2;
+        const R = size * 0.42;
+
+        // Clear
+        ctx.clearRect(0, 0, size, size);
+
+        const now = new Date();
+        const h = now.getHours() % 12;
+        const m = now.getMinutes();
+        const s = now.getSeconds();
+        const ms = now.getMilliseconds();
+
+        const secAngle = ((s + ms / 1000) / 60) * Math.PI * 2;
+        const minAngle = ((m + s / 60) / 60) * Math.PI * 2;
+        const hrAngle  = ((h + m / 60) / 12) * Math.PI * 2;
+
+        if (isNight) {
+            // Minute ticks
+            for (let i = 0; i < 60; i++) {
+                if (i % 5 === 0) continue;
+                const angle = (i / 60) * Math.PI * 2;
+                const inner = polar(cx, cy, angle, R * 0.88);
+                const outer = polar(cx, cy, angle, R * 0.92);
+                ctx.strokeStyle = css(withAlpha(lumeCol, 0.2));
+                ctx.lineWidth = R * 0.012;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(inner.x, inner.y);
+                ctx.lineTo(outer.x, outer.y);
+                ctx.stroke();
+            }
+
+            // Hour capsules (night)
+            const capW = R * 0.04;
+            for (let i = 0; i < 12; i++) {
+                const angle = (i / 12) * Math.PI * 2;
+                const inner = polar(cx, cy, angle, R * 0.78);
+                const outer = polar(cx, cy, angle, R * 0.92);
+
+                ctx.strokeStyle = css(gray(0.12, 0.6));
+                ctx.lineWidth = capW;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(inner.x, inner.y);
+                ctx.lineTo(outer.x, outer.y);
+                ctx.stroke();
+
+                ctx.save();
+                ctx.shadowBlur = capW * 3 * glowInt;
+                ctx.shadowColor = css(withAlpha(lumeCol, 0.7 * glowInt));
+                ctx.strokeStyle = css(lumeCol);
+                ctx.lineWidth = capW * 0.4;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(inner.x, inner.y);
+                ctx.lineTo(outer.x, outer.y);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // Hour numbers (night)
+            const fs = R * 0.14;
+            ctx.font = `bold ${fs}px ${FONT}`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const nums = [12,1,2,3,4,5,6,7,8,9,10,11];
+            for (let i = 0; i < 12; i++) {
+                const angle = (i / 12) * Math.PI * 2;
+                const p = polar(cx, cy, angle, R * 0.65);
+                ctx.save();
+                ctx.shadowBlur = fs * 0.4 * glowInt;
+                ctx.shadowColor = css(withAlpha(lumeCol, 0.6 * glowInt));
+                ctx.fillStyle = css(lumeCol);
+                ctx.fillText(String(nums[i]), p.x, p.y);
+                ctx.restore();
+                ctx.fillStyle = css(lumeCol);
+                ctx.fillText(String(nums[i]), p.x, p.y);
+            }
+
+            // Minute numbers
+            const fsm = R * 0.065;
+            ctx.font = `500 ${fsm}px ${FONT}`;
+            ctx.fillStyle = css(withAlpha(lumeCol, 0.25));
+            const mnums = [60,5,10,15,20,25,30,35,40,45,50,55];
+            for (let i = 0; i < 12; i++) {
+                const angle = (i / 12) * Math.PI * 2;
+                const p = polar(cx, cy, angle, R * 1.02);
+                ctx.fillText(String(mnums[i]).padStart(2, '0'), p.x, p.y);
+            }
+
+            // Hands (night)
+            const drawNightHand = (angle, length, width) => {
+                const neckLen = R * 0.085;
+                const neckEnd = polar(cx, cy, angle, neckLen);
+                const tip = polar(cx, cy, angle, length);
+
+                ctx.strokeStyle = css(gray(0.12, 0.6));
+                ctx.lineWidth = width;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(neckEnd.x, neckEnd.y);
+                ctx.lineTo(tip.x, tip.y);
+                ctx.stroke();
+
+                ctx.save();
+                ctx.shadowBlur = width * 2.5 * glowInt;
+                ctx.shadowColor = css(withAlpha(lumeCol, 0.7 * glowInt));
+                ctx.strokeStyle = css(lumeCol);
+                ctx.lineWidth = width * 0.45;
+                ctx.beginPath();
+                ctx.moveTo(neckEnd.x, neckEnd.y);
+                ctx.lineTo(tip.x, tip.y);
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.strokeStyle = css(lumeCol);
+                ctx.lineWidth = width * 0.3;
+                ctx.beginPath();
+                ctx.moveTo(neckEnd.x, neckEnd.y);
+                ctx.lineTo(tip.x, tip.y);
+                ctx.stroke();
+            };
+
+            drawNightHand(hrAngle, R * 0.52, R * 0.05);
+            drawNightHand(minAngle, R * 0.74, R * 0.035);
+
+            // Second hand
+            const stip = polar(cx, cy, secAngle, R * 0.78);
+            const stail = polar(cx, cy, secAngle + Math.PI, R * 0.15);
+            ctx.strokeStyle = css(gray(0.25, 0.6));
+            ctx.lineWidth = R * 0.009;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(stail.x, stail.y);
+            ctx.lineTo(stip.x, stip.y);
+            ctx.stroke();
+
+            // Center dot
+            ctx.fillStyle = css(gray(0.15));
+            ctx.beginPath();
+            ctx.arc(cx, cy, R * 0.035, 0, Math.PI * 2);
+            ctx.fill();
+
+        } else {
+            // Day mode — turquoise theme
+            const theme = {
+                bg: C(0.69, 0.89, 0.89),
+                tick: C(0.08, 0.24, 0.28),
+                num: C(0.08, 0.24, 0.28),
+                hand: gray(0.91),
+                shadow: gray(0, 0.15),
+                sec: C(0.80, 0.12, 0.12)
+            };
+
+            // Background circle
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cx, cy, R * 1.18, 0, Math.PI * 2);
+            ctx.fillStyle = css(theme.bg);
+            ctx.fill();
+            ctx.restore();
+
+            // Minute ticks
+            for (let i = 0; i < 60; i++) {
+                if (i % 5 === 0) continue;
+                const angle = (i / 60) * Math.PI * 2;
+                const inner = polar(cx, cy, angle, R * 0.88);
+                const outer = polar(cx, cy, angle, R * 0.92);
+                ctx.strokeStyle = css(theme.tick);
+                ctx.lineWidth = R * 0.012;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(inner.x, inner.y);
+                ctx.lineTo(outer.x, outer.y);
+                ctx.stroke();
+            }
+
+            // Hour capsules (day)
+            const capW = R * 0.04;
+            for (let i = 0; i < 12; i++) {
+                const angle = (i / 12) * Math.PI * 2;
+                const inner = polar(cx, cy, angle, R * 0.78);
+                const outer = polar(cx, cy, angle, R * 0.92);
+
+                ctx.save();
+                ctx.shadowOffsetX = capW * 0.2;
+                ctx.shadowOffsetY = capW * 0.4;
+                ctx.shadowBlur = capW * 1.2;
+                ctx.shadowColor = css(theme.shadow);
+                ctx.strokeStyle = css(theme.hand);
+                ctx.lineWidth = capW;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(inner.x, inner.y);
+                ctx.lineTo(outer.x, outer.y);
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.strokeStyle = 'rgba(199,230,184,0.35)';
+                ctx.lineWidth = capW * 0.4;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(inner.x, inner.y);
+                ctx.lineTo(outer.x, outer.y);
+                ctx.stroke();
+            }
+
+            // Hour numbers
+            const fs = R * 0.14;
+            ctx.font = `bold ${fs}px ${FONT}`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = css(theme.num);
+            const nums = [12,1,2,3,4,5,6,7,8,9,10,11];
+            for (let i = 0; i < 12; i++) {
+                const angle = (i / 12) * Math.PI * 2;
+                const p = polar(cx, cy, angle, R * 0.65);
+                ctx.fillText(String(nums[i]), p.x, p.y);
+            }
+
+            // Minute numbers
+            const fsm = R * 0.065;
+            ctx.font = `500 ${fsm}px ${FONT}`;
+            ctx.fillStyle = css(theme.num);
+            const mnums = [60,5,10,15,20,25,30,35,40,45,50,55];
+            for (let i = 0; i < 12; i++) {
+                const angle = (i / 12) * Math.PI * 2;
+                const p = polar(cx, cy, angle, R * 1.02);
+                ctx.fillText(String(mnums[i]).padStart(2, '0'), p.x, p.y);
+            }
+
+            // Hands (day)
+            const drawDayHand = (angle, length, width) => {
+                const neckLen = R * 0.085;
+                const neckStart = polar(cx, cy, angle, 0);
+                const neckEnd = polar(cx, cy, angle, neckLen);
+                const tip = polar(cx, cy, angle, length);
+
+                ctx.save();
+                ctx.shadowOffsetX = width * 0.3;
+                ctx.shadowOffsetY = width * 0.5;
+                ctx.shadowBlur = width * 1.5;
+                ctx.shadowColor = css(theme.shadow);
+                ctx.strokeStyle = css(theme.hand);
+                ctx.lineWidth = width;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(neckEnd.x, neckEnd.y);
+                ctx.lineTo(tip.x, tip.y);
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.strokeStyle = css(theme.hand);
+                ctx.lineWidth = width * 0.30;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(neckStart.x, neckStart.y);
+                ctx.lineTo(neckEnd.x, neckEnd.y);
+                ctx.stroke();
+
+                ctx.strokeStyle = 'rgba(199,230,184,0.35)';
+                ctx.lineWidth = width * 0.4;
+                ctx.beginPath();
+                ctx.moveTo(neckEnd.x, neckEnd.y);
+                ctx.lineTo(tip.x, tip.y);
+                ctx.stroke();
+            };
+
+            drawDayHand(hrAngle, R * 0.52, R * 0.05);
+            drawDayHand(minAngle, R * 0.74, R * 0.035);
+
+            // Second hand
+            const stip = polar(cx, cy, secAngle, R * 0.78);
+            const stail = polar(cx, cy, secAngle + Math.PI, R * 0.15);
+            ctx.strokeStyle = css(theme.sec);
+            ctx.lineWidth = R * 0.009;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(stail.x, stail.y);
+            ctx.lineTo(stip.x, stip.y);
+            ctx.stroke();
+
+            // Center dot
+            ctx.fillStyle = css(theme.hand);
+            ctx.beginPath();
+            ctx.arc(cx, cy, R * 0.035, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Second hand ring + pin
+            ctx.fillStyle = css(theme.sec);
+            ctx.beginPath();
+            ctx.arc(cx, cy, R * 0.035 * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = css(gray(0.41));
+            ctx.beginPath();
+            ctx.arc(cx, cy, R * 0.01, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // ─── Mini movement clocks ──────────────────────
+    function drawMovementClock(canvas, mode) {
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        const size = Math.min(rect.width, rect.height);
+        if (size === 0) return;
+
+        canvas.width = size * dpr;
+        canvas.height = size * dpr;
+        ctx.scale(dpr, dpr);
+        ctx.clearRect(0, 0, size, size);
+
+        const cx = size / 2;
+        const cy = size / 2;
+        const R = size * 0.40;
+
+        const now = new Date();
+        const s = now.getSeconds();
+        const ms = now.getMilliseconds();
+
+        // Calculate second-hand angle based on movement type
+        let secAngle;
+        if (mode === 'quartz') {
+            // Discrete 1-second jumps — classic quartz tick
+            secAngle = (s / 60) * Math.PI * 2;
+        } else if (mode === 'mechanical') {
+            // Smooth continuous sweep — high-beat calibre feel
+            secAngle = ((s + ms / 1000) / 60) * Math.PI * 2;
+        } else {
+            // 8 beats per second — like a 28,800 vph Swiss movement
+            const beats = s * 8 + Math.floor(ms / 125);
+            secAngle = (beats / 480) * Math.PI * 2;
+        }
+
+        const lumeCol = C(0.004, 0.906, 1.0); // cyan
+        const glowInt = 0.5;
+
+        // Outer ring
+        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * 1.1, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Hour ticks
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const inner = polar(cx, cy, angle, R * 0.82);
+            const outer = polar(cx, cy, angle, R * 0.95);
+            ctx.save();
+            ctx.shadowBlur = 4 * glowInt;
+            ctx.shadowColor = css(withAlpha(lumeCol, 0.4 * glowInt));
+            ctx.strokeStyle = css(withAlpha(lumeCol, 0.6));
+            ctx.lineWidth = i === 0 ? R * 0.05 : R * 0.03;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(inner.x, inner.y);
+            ctx.lineTo(outer.x, outer.y);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Minute hand (static for demo, pointing ~10:10)
+        const minAngle = (10 / 60) * Math.PI * 2;
+        const hrAngle = (10 / 12 + 10 / 720) * Math.PI * 2;
+
+        // Hour hand
+        const hTip = polar(cx, cy, hrAngle, R * 0.50);
+        const hNeck = polar(cx, cy, hrAngle, R * 0.085);
+        ctx.save();
+        ctx.shadowBlur = 4 * glowInt;
+        ctx.shadowColor = css(withAlpha(lumeCol, 0.5 * glowInt));
+        ctx.strokeStyle = css(withAlpha(lumeCol, 0.7));
+        ctx.lineWidth = R * 0.045;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(hNeck.x, hNeck.y);
+        ctx.lineTo(hTip.x, hTip.y);
+        ctx.stroke();
+        ctx.restore();
+
+        // Minute hand
+        const mTip = polar(cx, cy, minAngle, R * 0.72);
+        const mNeck = polar(cx, cy, minAngle, R * 0.085);
+        ctx.save();
+        ctx.shadowBlur = 4 * glowInt;
+        ctx.shadowColor = css(withAlpha(lumeCol, 0.5 * glowInt));
+        ctx.strokeStyle = css(withAlpha(lumeCol, 0.7));
+        ctx.lineWidth = R * 0.03;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(mNeck.x, mNeck.y);
+        ctx.lineTo(mTip.x, mTip.y);
+        ctx.stroke();
+        ctx.restore();
+
+        // Second hand — the star of the show
+        const sTip = polar(cx, cy, secAngle, R * 0.85);
+        const sTail = polar(cx, cy, secAngle + Math.PI, R * 0.18);
+        ctx.save();
+        ctx.shadowBlur = 6 * glowInt;
+        ctx.shadowColor = 'rgba(255, 80, 80, 0.5)';
+        ctx.strokeStyle = 'rgba(255, 80, 80, 0.9)';
+        ctx.lineWidth = R * 0.015;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(sTail.x, sTail.y);
+        ctx.lineTo(sTip.x, sTip.y);
+        ctx.stroke();
+        ctx.restore();
+
+        // Center dot
+        ctx.fillStyle = 'rgba(255, 80, 80, 0.9)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * 0.035, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = css(gray(0.15));
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * 0.015, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // ─── Setup canvases ─────────────────────────────
+    const heroCanvas = document.getElementById('hero-canvas');
+    const nightCanvas = document.getElementById('night-canvas');
+    const mvQuartz = document.getElementById('mv-quartz');
+    const mvMechanical = document.getElementById('mv-mechanical');
+    const mvDigital = document.getElementById('mv-digital');
+    let currentLume = LUME_COLORS.cyan;
+    let currentLumeKey = 'cyan';
+
+    function animate() {
+        drawClock(heroCanvas, false, null, 0);
+        drawClock(nightCanvas, true, currentLume, 0.7);
+        drawMovementClock(mvQuartz, 'quartz');
+        drawMovementClock(mvMechanical, 'mechanical');
+        drawMovementClock(mvDigital, 'digital');
+        requestAnimationFrame(animate);
+    }
+    animate();
+
+    // ─── Lume palette ───────────────────────────────
+    const lumePalette = document.getElementById('lume-palette');
+    LUME_ORDER.forEach(key => {
+        const col = LUME_COLORS[key];
+        const dot = document.createElement('div');
+        dot.className = 'lume-dot' + (key === 'cyan' ? ' active' : '');
+        const bgColor = `rgba(${(col.r*255)|0},${(col.g*255)|0},${(col.b*255)|0},1)`;
+        dot.style.background = bgColor;
+        dot.style.setProperty('--dot-glow', `rgba(${(col.r*255)|0},${(col.g*255)|0},${(col.b*255)|0},0.5)`);
+        dot.addEventListener('click', () => {
+            lumePalette.querySelectorAll('.lume-dot').forEach(d => d.classList.remove('active'));
+            dot.classList.add('active');
+            currentLume = col;
+            currentLumeKey = key;
+        });
+        lumePalette.appendChild(dot);
+    });
+
+    // ─── Theme palette ──────────────────────────────
+    const themePalette = document.getElementById('theme-palette');
+    THEME_ORDER.forEach(key => {
+        const t = THEMES[key];
+        const cell = document.createElement('div');
+        cell.className = 'theme-cell';
+        cell.style.background = css(t.bg);
+        const luma = t.bg.r * 0.299 + t.bg.g * 0.587 + t.bg.b * 0.114;
+        cell.innerHTML = `<div class="theme-label" style="color: ${luma > 0.5 ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.85)'}">${t.name}</div>`;
+        themePalette.appendChild(cell);
+    });
+
+    // ─── City coordinates ──────────────────────────────
+    const CITY_COORDS = {
+        'Kyiv':         { lat: 50.4501, lon: 30.5234 },
+        'Lviv':         { lat: 49.8397, lon: 24.0297 },
+        'London':       { lat: 51.5074, lon: -0.1278 },
+        'New York':     { lat: 40.7128, lon: -74.0060 },
+        'Los Angeles':  { lat: 34.0522, lon: -118.2437 },
+        'Paris':        { lat: 48.8566, lon: 2.3522 },
+        'Berlin':       { lat: 52.5200, lon: 13.4050 },
+        'Tokyo':        { lat: 35.6762, lon: 139.6503 },
+        'Dubai':        { lat: 25.2048, lon: 55.2708 },
+        'Istanbul':     { lat: 41.0082, lon: 28.9784 },
+        'Bangkok':      { lat: 13.7563, lon: 100.5018 },
+        'Singapore':    { lat: 1.3521,  lon: 103.8198 },
+        'Sydney':       { lat: -33.8688, lon: 151.2093 },
+        'Toronto':      { lat: 43.6532, lon: -79.3832 },
+        'Barcelona':    { lat: 41.3874, lon: 2.1686 },
+        'Rome':         { lat: 41.9028, lon: 12.4964 },
+        'Beijing':      { lat: 39.9042, lon: 116.4074 },
+        'Seoul':        { lat: 37.5665, lon: 126.9780 },
+        'Tel Aviv':     { lat: 32.0853, lon: 34.7818 },
+        'Buenos Aires': { lat: -34.6037, lon: -58.3816 }
+    };
+
+    const weatherTempEl = document.getElementById('weather-temp');
+    const weatherCityEl = document.querySelector('.weather-city');
+
+    function fetchWeather(city) {
+        const coords = CITY_COORDS[city];
+        if (!coords) return;
+        weatherTempEl.textContent = '—°';
+        weatherCityEl.textContent = city;
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.current?.temperature_2m !== undefined) {
+                    weatherTempEl.textContent = `${Math.round(data.current.temperature_2m)}°`;
+                }
+            })
+            .catch(() => { weatherTempEl.textContent = '--°'; });
+    }
+
+    // ─── City list ──────────────────────────────────
+    const cityList = document.getElementById('city-list');
+    let activeTag = null;
+    CITIES.forEach(city => {
+        const tag = document.createElement('div');
+        tag.className = 'city-tag';
+        tag.textContent = city;
+        tag.style.cursor = 'pointer';
+        tag.addEventListener('click', () => {
+            if (activeTag) activeTag.style.cssText = 'cursor:pointer';
+            activeTag = tag;
+            tag.style.cssText = `cursor:pointer;color:${getComputedStyle(document.documentElement).getPropertyValue('--text')};background:${getComputedStyle(document.documentElement).getPropertyValue('--surface')};border-color:rgba(255,255,255,0.08)`;
+            fetchWeather(city);
+        });
+        if (city === 'Kyiv') {
+            activeTag = tag;
+            tag.style.cssText = `cursor:pointer;color:${getComputedStyle(document.documentElement).getPropertyValue('--text')};background:${getComputedStyle(document.documentElement).getPropertyValue('--surface')};border-color:rgba(255,255,255,0.08)`;
+        }
+        cityList.appendChild(tag);
+    });
+
+    // ─── Initial weather fetch ──────────────────────
+    fetchWeather('Kyiv');
+
+    // ─── Scroll reveal ──────────────────────────────
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+    reveals.forEach((el, i) => {
+        el.style.transitionDelay = `${i % 4 * 0.1}s`;
+        observer.observe(el);
+    });
+
+    // ─── Smooth scroll for nav links ────────────────
+    document.querySelectorAll('a[href^="#"]').forEach(link => {
+        link.addEventListener('click', e => {
+            const target = document.querySelector(link.getAttribute('href'));
+            if (target) {
+                e.preventDefault();
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    });
+
+    })();
+    </script>
+</body>
+</html>

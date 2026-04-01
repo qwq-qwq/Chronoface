@@ -32,11 +32,11 @@ body.active {
     width: 40px;
     height: 40px;
     background: rgba(255, 255, 255, 0.08);
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 50%;
     cursor: pointer;
     opacity: 0;
-    transition: opacity 0.3s;
+    transition: opacity 0.3s, background 0.3s, border-color 0.3s;
     z-index: 10;
     display: flex;
     align-items: center;
@@ -44,18 +44,60 @@ body.active {
 }
 
 body.active #settings-btn {
-    opacity: 0.5;
+    opacity: 0.7;
 }
 
 #settings-btn:hover {
     opacity: 1 !important;
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.25);
 }
 
 #settings-btn svg {
     width: 20px;
     height: 20px;
     fill: #fff;
+}
+
+/* Settings hint tooltip */
+
+#settings-hint {
+    position: fixed;
+    top: 20px;
+    left: 68px;
+    background: rgba(18, 18, 20, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 8px 14px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateX(-8px);
+    transition: opacity 0.4s, transform 0.4s;
+    z-index: 10;
+}
+
+#settings-hint.visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+#settings-hint::before {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: 50%;
+    transform: translateY(-50%) rotate(45deg);
+    width: 8px;
+    height: 8px;
+    background: rgba(18, 18, 20, 0.88);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Overlay */
@@ -89,18 +131,69 @@ body.active #settings-btn {
     padding: 28px 20px;
     color: #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.12) transparent;
+}
+
+#panel::-webkit-scrollbar {
+    width: 4px;
+}
+
+#panel::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#panel::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 2px;
+}
+
+#panel::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
 }
 
 #panel.open {
     transform: translateX(0);
 }
 
-#panel h2 {
-    font-size: 17px;
-    font-weight: 600;
+/* Panel header with close button */
+
+#panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     margin-bottom: 24px;
-    letter-spacing: 0.3px;
+}
+
+#panel h2 {
+    font-family: 'Jost', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
     color: #fff;
+    margin: 0;
+}
+
+#panel-close {
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    color: #666;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    line-height: 1;
+}
+
+#panel-close:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #aaa;
+    border-color: rgba(255, 255, 255, 0.15);
 }
 
 #panel section {
@@ -109,10 +202,10 @@ body.active #settings-btn {
 
 #panel section > label:first-child {
     display: block;
-    font-size: 11px;
+    font-size: 10px;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    color: #777;
+    letter-spacing: 1.2px;
+    color: #666;
     margin-bottom: 8px;
     font-weight: 500;
 }
@@ -132,7 +225,7 @@ body.active #settings-btn {
     background: none;
     border: none;
     border-bottom: 2px solid transparent;
-    color: #666;
+    color: #555;
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
@@ -161,14 +254,16 @@ body.active #settings-btn {
     margin-bottom: 18px;
 }
 
+/* Auto mode toggle */
+
 #panel .auto-section {
-    margin-bottom: 10px;
+    margin-bottom: 14px;
 }
 
 #panel .auto-section > label {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 10px;
     font-size: 12px;
     color: #888;
     cursor: pointer;
@@ -176,10 +271,50 @@ body.active #settings-btn {
     letter-spacing: 0;
 }
 
-#panel .auto-section input[type="checkbox"] {
-    margin: 0;
-    width: 13px;
-    height: 13px;
+/* Custom toggle switch */
+
+.toggle-switch {
+    position: relative;
+    width: 34px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.toggle-switch .slider {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    transition: background 0.25s;
+    cursor: pointer;
+}
+
+.toggle-switch .slider::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #666;
+    transition: transform 0.25s, background 0.25s;
+}
+
+.toggle-switch input:checked + .slider {
+    background: rgba(0, 212, 232, 0.3);
+}
+
+.toggle-switch input:checked + .slider::after {
+    transform: translateX(14px);
+    background: #00d4e8;
 }
 
 /* Color circles */
@@ -318,26 +453,19 @@ input[type="range"]::-moz-range-thumb {
 #panel .toggle-group {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 20px;
 }
 
 #panel .toggle-group > label {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 10px;
     font-size: 12px;
     color: #bbb;
     cursor: pointer;
     text-transform: none;
     letter-spacing: 0;
     margin: 0;
-}
-
-#panel .toggle-group input[type="checkbox"] {
-    margin: 0;
-    width: 13px;
-    height: 13px;
-    flex-shrink: 0;
 }
 
 
@@ -347,17 +475,17 @@ input[type="range"]::-moz-range-thumb {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #555;
+    color: #777;
     text-decoration: none;
     font-size: 12px;
-    margin-top: 20px;
-    padding-top: 16px;
+    margin-top: 24px;
+    padding-top: 18px;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
     transition: color 0.2s;
 }
 
 #github-link:hover {
-    color: #aaa;
+    color: #bbb;
 }
 
 #github-link svg {
