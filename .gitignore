@@ -1,0 +1,6 @@
+.DS_Store
+.idea/
+.claude/
+
+# Xcode build artifacts
+Chronoface/build/
