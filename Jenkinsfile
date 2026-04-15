@@ -2,17 +2,16 @@ pipeline {
     agent any
 
     environment {
-        APP_NAME = "chronoface"
-        APP_DIR = "/opt/projects/${APP_NAME}"
-
-        DOCKER_HOST = "unix:///var/run/docker.sock"
-
+        APP_NAME   = "chronoface"
+        APP_DOMAIN = "chronoface.perek.rest"
+        SITES_ROOT = "/opt/static-sites"
+        TARGET_DIR = "/opt/static-sites/chronoface.perek.rest"
+        SRC_DIR    = "web/html"
         GIT_COMMIT_SHORT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
-        BUILD_TIMESTAMP = sh(script: "date +%Y%m%d_%H%M%S", returnStdout: true).trim()
     }
 
     options {
-        timeout(time: 10, unit: 'MINUTES')
+        timeout(time: 5, unit: 'MINUTES')
         disableConcurrentBuilds()
     }
 
@@ -20,63 +19,38 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
-                sh 'echo "Building commit: ${GIT_COMMIT_SHORT} at ${BUILD_TIMESTAMP}"'
-            }
-        }
-
-        stage('Build Static Files') {
-            steps {
-                sh 'echo "Building static files..."'
-            }
-        }
-
-        stage('Prepare Deployment') {
-            steps {
-                sh "mkdir -p ${env.APP_DIR}/html ${env.APP_DIR}/nginx/conf.d"
-
-                sh "cp -r web/html/* ${env.APP_DIR}/html/"
-                sh "cp -r web/nginx/conf.d/* ${env.APP_DIR}/nginx/conf.d/"
-                sh "cp web/docker-compose.yml ${env.APP_DIR}/"
-
-                sh "echo 'BUILD_ID=${env.BUILD_ID}\nBUILD_NUMBER=${env.BUILD_NUMBER}\nGIT_COMMIT=${env.GIT_COMMIT_SHORT}\nBUILD_TIMESTAMP=${env.BUILD_TIMESTAMP}' > ${env.APP_DIR}/version.txt"
             }
         }
 
         stage('Deploy') {
             steps {
-                dir("${env.APP_DIR}") {
-                    sh 'docker-compose down || true'
-                    sh 'docker-compose up -d'
-                }
+                sh '''
+                    set -eu
+                    mkdir -p "${SITES_ROOT}"
+                    STAGING="${SITES_ROOT}/.${APP_NAME}.staging.$$"
+                    rsync -a --delete "${SRC_DIR}/" "${STAGING}/"
+                    rm -rf "${TARGET_DIR}.old" || true
+                    if [ -d "${TARGET_DIR}" ]; then mv "${TARGET_DIR}" "${TARGET_DIR}.old"; fi
+                    mv "${STAGING}" "${TARGET_DIR}"
+                    rm -rf "${TARGET_DIR}.old" || true
+                    echo "${GIT_COMMIT_SHORT}" > "${TARGET_DIR}/.version"
+                '''
             }
         }
 
-        stage('Verify Deployment') {
-            steps {
-                sh "docker ps | grep ${env.APP_NAME}-nginx"
-                sh 'sleep 5'
-                sh 'curl -s --head --fail http://localhost || true'
-            }
-        }
-
-        stage('Cleanup') {
+        stage('Verify') {
             steps {
                 sh '''
-                docker image prune -a -f --filter "until=24h"
+                    set -eu
+                    curl -sSf -H "Host: ${APP_DOMAIN}" http://static-hub/ -o /dev/null
                 '''
             }
         }
     }
 
     post {
-        success {
-            echo 'Deployment completed successfully!'
-        }
-        failure {
-            echo 'Deployment failed! Check the logs for details.'
-        }
-        always {
-            cleanWs()
-        }
+        success { echo "Deployed ${APP_DOMAIN} (${GIT_COMMIT_SHORT})" }
+        failure { echo "Deploy of ${APP_DOMAIN} failed" }
+        always  { cleanWs() }
     }
 }
