@@ -7,6 +7,10 @@ pipeline {
         SRC_DIR     = "web/html"
         S3_ENDPOINT = "https://s3.perek.rest"
         AWS_DEFAULT_REGION = "garage"
+        // awscli v2 (≥2.23) по умолчанию шлёт x-amz-content-sha256 в новом streaming-формате,
+        // который Garage 1.0.1 не поддерживает. Откатываем на legacy поведение.
+        AWS_REQUEST_CHECKSUM_CALCULATION = "when_required"
+        AWS_RESPONSE_CHECKSUM_VALIDATION = "when_required"
         GIT_COMMIT_SHORT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
     }
 
