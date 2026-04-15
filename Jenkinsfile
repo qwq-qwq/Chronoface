@@ -2,11 +2,11 @@ pipeline {
     agent any
 
     environment {
-        APP_NAME   = "chronoface"
-        APP_DOMAIN = "chronoface.perek.rest"
-        SITES_ROOT = "/opt/static-sites"
-        TARGET_DIR = "/opt/static-sites/chronoface.perek.rest"
-        SRC_DIR    = "web/html"
+        APP_NAME    = "chronoface"
+        BUCKET      = "chronoface"
+        SRC_DIR     = "web/html"
+        S3_ENDPOINT = "https://s3.perek.rest"
+        S3_REGION   = "garage"
         GIT_COMMIT_SHORT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
     }
 
@@ -17,40 +17,34 @@ pipeline {
 
     stages {
         stage('Checkout') {
-            steps {
-                checkout scm
-            }
+            steps { checkout scm }
         }
 
         stage('Deploy') {
             steps {
-                sh '''
-                    set -eu
-                    mkdir -p "${SITES_ROOT}"
-                    STAGING="${SITES_ROOT}/.${APP_NAME}.staging.$$"
-                    rsync -a --delete "${SRC_DIR}/" "${STAGING}/"
-                    rm -rf "${TARGET_DIR}.old" || true
-                    if [ -d "${TARGET_DIR}" ]; then mv "${TARGET_DIR}" "${TARGET_DIR}.old"; fi
-                    mv "${STAGING}" "${TARGET_DIR}"
-                    rm -rf "${TARGET_DIR}.old" || true
-                    echo "${GIT_COMMIT_SHORT}" > "${TARGET_DIR}/.version"
-                '''
+                withAWS(credentials: 'garage-s3',
+                        endpointUrl: env.S3_ENDPOINT,
+                        region: env.S3_REGION) {
+                    s3Delete(bucket: env.BUCKET, path: '')
+                    s3Upload(bucket: env.BUCKET,
+                             workingDir: env.SRC_DIR,
+                             includePathPattern: '**/*')
+                    writeFile file: '.version', text: env.GIT_COMMIT_SHORT
+                    s3Upload(bucket: env.BUCKET, file: '.version')
+                }
             }
         }
 
         stage('Verify') {
             steps {
-                sh '''
-                    set -eu
-                    curl -sSf -H "Host: ${APP_DOMAIN}" http://static-hub/ -o /dev/null
-                '''
+                sh 'curl -sSf "https://${APP_NAME}.perek.rest/" -o /dev/null'
             }
         }
     }
 
     post {
-        success { echo "Deployed ${APP_DOMAIN} (${GIT_COMMIT_SHORT})" }
-        failure { echo "Deploy of ${APP_DOMAIN} failed" }
+        success { echo "Deployed ${APP_NAME}.perek.rest (${GIT_COMMIT_SHORT})" }
+        failure { echo "Deploy of ${APP_NAME}.perek.rest failed" }
         always  { cleanWs() }
     }
 }
