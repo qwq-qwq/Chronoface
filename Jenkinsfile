@@ -7,6 +7,9 @@ pipeline {
         SRC_DIR     = "web/html"
         S3_ENDPOINT = "https://s3.perek.rest"
         S3_REGION   = "garage"
+        // Garage принимает только path-style (bucket в пути, не в поддомене Host),
+        // иначе AWS SDK шлёт запрос на <bucket>.s3.perek.rest, которого нет в DNS/TLS.
+        AWS_FORCE_PATH_STYLE_ACCESS = "true"
         GIT_COMMIT_SHORT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
     }
 
