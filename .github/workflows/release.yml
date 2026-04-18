@@ -1,0 +1,49 @@
+name: Build .saver
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Build Chronoface.saver
+        run: |
+          xcodebuild \
+            -project Chronoface/Chronoface.xcodeproj \
+            -target Chronoface \
+            -configuration Release \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CONFIGURATION_BUILD_DIR="$PWD/build" \
+            clean build
+
+      - name: Package .saver
+        run: |
+          cd build
+          ditto -c -k --sequesterRsrc --keepParent Chronoface.saver ../Chronoface.saver.zip
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Chronoface.saver
+          path: Chronoface.saver.zip
+
+      - name: Attach to Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Chronoface.saver.zip
+          generate_release_notes: true
