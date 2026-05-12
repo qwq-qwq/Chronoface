@@ -75,6 +75,48 @@ jobs:
             -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security list-keychain -d user -s "$KEYCHAIN_PATH" $(security list-keychain -d user | xargs)
 
+      - name: Verify signing identities in keychain
+        if: env.HAS_APP_SIGNING == 'true'
+        env:
+          DEV_ID: ${{ secrets.MACOS_DEVELOPER_ID }}
+          INSTALLER_ID: ${{ secrets.MACOS_INSTALLER_ID }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
+
+          echo "::group::All identities (basic) in build keychain"
+          security find-identity -v "$KEYCHAIN_PATH" || true
+          echo "::endgroup::"
+
+          echo "::group::All identities (codesigning) in build keychain"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH" || true
+          echo "::endgroup::"
+
+          echo "::group::Default keychain search list"
+          security list-keychain -d user
+          echo "::endgroup::"
+
+          # Length helps spot trailing whitespace / wrong values without exposing the secret.
+          # Expected: DEV_ID=57, TEAM_ID=10, INSTALLER_ID=55.
+          echo "Secret lengths: DEV_ID=${#DEV_ID} TEAM_ID=${#TEAM_ID} INSTALLER_ID=${#INSTALLER_ID}"
+
+          if security find-identity -v "$KEYCHAIN_PATH" | grep -qF "$DEV_ID"; then
+            echo "OK: MACOS_DEVELOPER_ID matches an identity in the build keychain."
+          else
+            echo "ERROR: MACOS_DEVELOPER_ID does not match any identity in the build keychain."
+            echo "       Either the secret value is wrong or the .p12 lacks the matching cert+key."
+            exit 1
+          fi
+
+          if [ -n "$INSTALLER_ID" ]; then
+            if security find-identity -v "$KEYCHAIN_PATH" | grep -qF "$INSTALLER_ID"; then
+              echo "OK: MACOS_INSTALLER_ID matches an identity in the build keychain."
+            else
+              echo "ERROR: MACOS_INSTALLER_ID does not match any identity in the build keychain."
+              exit 1
+            fi
+          fi
+
       - name: Build Chronoface.saver (signed)
         if: env.HAS_APP_SIGNING == 'true'
         env:
