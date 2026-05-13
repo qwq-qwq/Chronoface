@@ -7,7 +7,7 @@ A minimalist analog clock screen saver for macOS, with a matching web demo.
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
 <p align="center">
-  <img src="web/html/themes-grid.jpg" alt="All 16 Chronoface dial themes" width="720">
+  <img src="web/html/themes-grid.jpg" alt="All 16 Chronoface dial themes" width="900">
 </p>
 
 ## Links

@@ -3,7 +3,7 @@ import AppKit
 
 // Generates marketing assets from the same drawing primitives as the screen saver:
 //   - web/html/og-image.jpg     (1200x630, Noir + amber lume, for og:image / twitter:card)
-//   - web/html/themes-grid.jpg  (1600x1600, 4x4 grid of all 16 themes, used by the
+//   - web/html/themes-grid.jpg  (2560x640, 8x2 strip of all 16 themes, used by the
 //                                landing page palette section and the README hero)
 //
 // Standalone script. Mirrors ChronofaceView day/night rendering; if the screen saver
@@ -612,10 +612,10 @@ func renderOGImage(to path: String) {
 // MARK: - Themes grid (4x4) for README
 
 func renderThemesGrid(to path: String) {
-    let cellSize: CGFloat = 400
+    let cellSize: CGFloat = 320
     let gap: CGFloat = 0
-    let cols: CGFloat = 4
-    let rows: CGFloat = 4
+    let cols: CGFloat = 8
+    let rows: CGFloat = 2
     let w = cellSize * cols + gap * (cols - 1)
     let h = cellSize * rows + gap * (rows - 1)
 
