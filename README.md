@@ -1,6 +1,6 @@
 # Chronoface
 
-A minimalist analog clock screen saver for macOS, with a matching web demo.
+A minimalist analog **watch face screen saver for macOS**: 16 dial themes, luminescent night mode, live weather, and a matching web demo.
 
 ![macOS 13+](https://img.shields.io/badge/macOS-13%2B-black?logo=apple)
 ![Swift 5](https://img.shields.io/badge/Swift-5-orange?logo=swift)
