@@ -312,8 +312,9 @@
         }
 
         .hero-clock canvas {
-            width: min(42vw, 520px);
-            height: min(42vw, 520px);
+            width: min(64vw, 800px);
+            aspect-ratio: 16 / 10;
+            height: auto;
         }
 
         /* clock glow ring */
@@ -529,23 +530,12 @@
             margin: 0 auto 60px;
         }
 
-        /* Soft mask on every edge so the dial strip dissolves into the page bg
-           with no grey tint over the bright cells. Two stacked masks combined
-           with `intersect` give a clean fade on all four sides. */
         .themes-image {
             display: block;
             width: 100%;
             max-width: 1280px;
             height: auto;
             margin: 0 auto;
-            -webkit-mask-image:
-                linear-gradient(to bottom, transparent 0, #000 6%, #000 94%, transparent 100%),
-                linear-gradient(to right, transparent 0, #000 1.2%, #000 98.8%, transparent 100%);
-            -webkit-mask-composite: source-in;
-            mask-image:
-                linear-gradient(to bottom, transparent 0, #000 6%, #000 94%, transparent 100%),
-                linear-gradient(to right, transparent 0, #000 1.2%, #000 98.8%, transparent 100%);
-            mask-composite: intersect;
         }
 
         /* ─── Cities Section ─────────────────────────── */
@@ -808,8 +798,8 @@
                 margin-bottom: 40px;
             }
             .hero-clock canvas {
-                width: 280px;
-                height: 280px;
+                width: 320px;
+                height: 200px;
             }
             .features { grid-template-columns: 1fr; padding: 0 20px 64px; }
             .night-section { grid-template-columns: 1fr; text-align: center; gap: 40px; }
@@ -1063,18 +1053,20 @@
         const ctx = canvas.getContext('2d');
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
-        const size = Math.min(rect.width, rect.height);
+        const canvasW = rect.width;
+        const canvasH = rect.height;
+        const size = Math.min(canvasW, canvasH);
 
-        canvas.width = size * dpr;
-        canvas.height = size * dpr;
+        canvas.width = canvasW * dpr;
+        canvas.height = canvasH * dpr;
         ctx.scale(dpr, dpr);
 
-        const cx = size / 2;
-        const cy = size / 2;
+        const cx = canvasW / 2;
+        const cy = canvasH / 2;
         const R = size * 0.42;
 
         // Clear
-        ctx.clearRect(0, 0, size, size);
+        ctx.clearRect(0, 0, canvasW, canvasH);
 
         const now = new Date();
         const h = now.getHours() % 12;
@@ -1224,10 +1216,13 @@
                 sec: C(0.80, 0.12, 0.12)
             };
 
-            // Background circle
+            // Background: rounded rectangle that fills the canvas. Canvas
+            // aspect ratio (set in CSS) dictates the shape - 16:10 for the
+            // hero, square for movement cards.
             ctx.save();
             ctx.beginPath();
-            ctx.arc(cx, cy, R * 1.18, 0, Math.PI * 2);
+            const cornerR = size * 0.07;
+            ctx.roundRect(0, 0, canvasW, canvasH, cornerR);
             ctx.fillStyle = css(theme.bg);
             ctx.fill();
             ctx.restore();
