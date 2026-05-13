@@ -529,50 +529,14 @@
             margin: 0 auto 60px;
         }
 
-        .theme-grid {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 4px;
-            max-width: 960px;
+        .themes-image {
+            display: block;
+            width: 100%;
+            max-width: 880px;
+            height: auto;
             margin: 0 auto;
-        }
-
-        .theme-cell {
-            position: relative;
-            aspect-ratio: 1;
-            border-radius: 4px;
-            cursor: pointer;
-            overflow: hidden;
-            transition: all 0.4s var(--ease-out);
-        }
-
-        .theme-cell:hover {
-            transform: scale(1.08);
-            z-index: 2;
-            border-radius: 8px;
-            box-shadow: 0 12px 40px rgba(0,0,0,0.6);
-        }
-
-        .theme-cell .theme-label {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 8px;
-            font-size: 0.6rem;
-            font-weight: 500;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            text-align: center;
-            opacity: 0;
-            transform: translateY(8px);
-            transition: all 0.3s var(--ease-out);
-            background: linear-gradient(transparent, rgba(0,0,0,0.5));
-        }
-
-        .theme-cell:hover .theme-label {
-            opacity: 1;
-            transform: translateY(0);
+            border-radius: 12px;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.55);
         }
 
         /* ─── Cities Section ─────────────────────────── */
@@ -814,7 +778,6 @@
             section { padding: 80px 28px; }
             .hero { padding: 0 28px; }
             .features { padding: 0 28px 80px; grid-template-columns: repeat(2, 1fr); }
-            .theme-grid { grid-template-columns: repeat(4, 1fr); }
             .divider { padding: 0 28px; }
         }
 
@@ -844,7 +807,6 @@
             .night-clock-wrap canvas { width: 280px; height: 280px; }
             .night-text { order: 1; }
             .lume-colors { justify-content: center; }
-            .themes-section .theme-grid { grid-template-columns: repeat(4, 1fr); }
             .cities-section {
                 grid-template-columns: 1fr;
                 gap: 40px;
@@ -946,7 +908,7 @@
         <p class="section-eyebrow">Colour Palette</p>
         <h2 class="section-title">16 curated dials.</h2>
         <p class="section-desc">Each theme is a considered palette with matched hand shadows, tick marks, and numerals. Dark dials glow. Light dials cast shadows.</p>
-        <div class="theme-grid" id="theme-palette"></div>
+        <img class="themes-image" src="themes-grid.jpg" alt="All 16 Chronoface dial themes, each rendered with its own ticks, hands and date window" width="1600" height="1600" loading="lazy">
     </section>
 
     <!-- Divider -->
@@ -1559,18 +1521,6 @@
             currentLumeKey = key;
         });
         lumePalette.appendChild(dot);
-    });
-
-    // ─── Theme palette ──────────────────────────────
-    const themePalette = document.getElementById('theme-palette');
-    THEME_ORDER.forEach(key => {
-        const t = THEMES[key];
-        const cell = document.createElement('div');
-        cell.className = 'theme-cell';
-        cell.style.background = css(t.bg);
-        const luma = t.bg.r * 0.299 + t.bg.g * 0.587 + t.bg.b * 0.114;
-        cell.innerHTML = `<div class="theme-label" style="color: ${luma > 0.5 ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.85)'}">${t.name}</div>`;
-        themePalette.appendChild(cell);
     });
 
     // ─── City coordinates ──────────────────────────────

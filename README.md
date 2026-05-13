@@ -7,7 +7,7 @@ A minimalist analog clock screen saver for macOS, with a matching web demo.
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
 <p align="center">
-  <img src="assets/themes-grid.jpg" alt="All 16 Chronoface dial themes" width="720">
+  <img src="web/html/themes-grid.jpg" alt="All 16 Chronoface dial themes" width="720">
 </p>
 
 ## Links
@@ -90,7 +90,7 @@ swift generate_marketing_assets.swift
 Produces two files from the same drawing code as the screen saver:
 
 - `web/html/og-image.jpg` - 1200x630 social card (Noir dial + amber lume), referenced by `og:image` / `twitter:card` on the landing page.
-- `assets/themes-grid.jpg` - 4x4 grid of all 16 dial themes, used as the README hero above.
+- `web/html/themes-grid.jpg` - 4x4 grid of all 16 dial themes. Used both as the README hero above and as the visual for the "Colour Palette" section of the landing page.
 
 ## License
 

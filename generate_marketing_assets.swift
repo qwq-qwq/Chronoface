@@ -2,8 +2,9 @@
 import AppKit
 
 // Generates marketing assets from the same drawing primitives as the screen saver:
-//   - web/html/og-image.jpg    (1200x630, Noir + amber lume, for og:image / twitter:card)
-//   - assets/themes-grid.jpg   (1600x1600, 4x4 grid of all 16 themes, for README)
+//   - web/html/og-image.jpg     (1200x630, Noir + amber lume, for og:image / twitter:card)
+//   - web/html/themes-grid.jpg  (1600x1600, 4x4 grid of all 16 themes, used by the
+//                                landing page palette section and the README hero)
 //
 // Standalone script. Mirrors ChronofaceView day/night rendering; if the screen saver
 // drawing logic changes, update both files together.
@@ -673,5 +674,5 @@ func renderThemesGrid(to path: String) {
 
 let cwd = FileManager.default.currentDirectoryPath
 renderOGImage(to: "\(cwd)/web/html/og-image.jpg")
-renderThemesGrid(to: "\(cwd)/assets/themes-grid.jpg")
+renderThemesGrid(to: "\(cwd)/web/html/themes-grid.jpg")
 print("Done.")
