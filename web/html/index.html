@@ -311,22 +311,27 @@
             animation: fadeIn 1.5s var(--ease-out) 0.4s forwards;
         }
 
-        .hero-clock canvas {
+        /* MacBook mockup wrapping the hero dial. SVG viewBox is 1200x740:
+           the screen panel sits at x76..1124, y14..654 (87.33% x 86.49%). */
+        .macbook-mockup {
+            position: relative;
             width: min(64vw, 800px);
-            aspect-ratio: 16 / 10;
-            height: auto;
+            aspect-ratio: 1200 / 740;
         }
 
-        /* clock glow ring */
-        .hero-clock::after {
-            content: '';
+        .macbook-frame {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .macbook-mockup canvas {
             position: absolute;
-            width: 80%;
-            height: 80%;
-            border-radius: 50%;
-            border: 1px solid rgba(0,212,232,0.06);
-            pointer-events: none;
-            animation: pulseRing 4s ease-in-out infinite;
+            left: 6.33%;
+            top: 1.89%;
+            width: 87.34%;
+            height: 86.49%;
+            display: block;
         }
 
         /* ─── Divider ──────────────────────────────────── */
@@ -797,9 +802,8 @@
                 order: 0;
                 margin-bottom: 40px;
             }
-            .hero-clock canvas {
-                width: 320px;
-                height: 200px;
+            .macbook-mockup {
+                width: 360px;
             }
             .features { grid-template-columns: 1fr; padding: 0 20px 64px; }
             .night-section { grid-template-columns: 1fr; text-align: center; gap: 40px; }
@@ -848,7 +852,23 @@
             </div>
         </div>
         <div class="hero-clock">
-            <canvas id="hero-canvas"></canvas>
+            <div class="macbook-mockup">
+                <svg class="macbook-frame" viewBox="0 0 1200 740" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <!-- Lid (back of display) -->
+                    <rect x="60" y="0" width="1080" height="668" rx="22" ry="22" fill="#1f1f22"/>
+                    <!-- Inner bezel: black, where the screen lives -->
+                    <rect x="76" y="14" width="1048" height="640" rx="12" ry="12" fill="#000"/>
+                    <!-- Notch (camera housing) -->
+                    <path d="M 540,14 L 540,30 Q 540,38 548,38 L 652,38 Q 660,38 660,30 L 660,14 Z" fill="#1f1f22"/>
+                    <!-- Hinge line where the lid meets the base -->
+                    <rect x="100" y="668" width="1000" height="6" fill="#0a0a0c"/>
+                    <!-- Trapezoidal keyboard base -->
+                    <path d="M 28,674 L 1172,674 L 1180,696 Q 1180,710 1166,712 L 34,712 Q 20,710 20,696 Z" fill="#2a2a2e"/>
+                    <!-- Bottom detail (trackpad-front lip) -->
+                    <rect x="540" y="708" width="120" height="2" fill="#1a1a1c" rx="1"/>
+                </svg>
+                <canvas id="hero-canvas"></canvas>
+            </div>
         </div>
     </div>
 
@@ -1185,8 +1205,8 @@
                 ctx.stroke();
             };
 
-            drawNightHand(hrAngle, R * 0.52, R * 0.05);
-            drawNightHand(minAngle, R * 0.74, R * 0.035);
+            drawNightHand(hrAngle, R * 0.52, R * 0.045);
+            drawNightHand(minAngle, R * 0.74, R * 0.045);
 
             // Second hand
             const stip = polar(cx, cy, secAngle, R * 0.78);
@@ -1216,12 +1236,13 @@
                 sec: C(0.80, 0.12, 0.12)
             };
 
-            // Background: rounded rectangle that fills the canvas. Canvas
-            // aspect ratio (set in CSS) dictates the shape - 16:10 for the
-            // hero, square for movement cards.
+            // Background: rounded rectangle filling the canvas. Corner radius
+            // is tuned to match the inner screen rounding of the MacBook
+            // mockup SVG (rx=12 at viewBox width 1200, on a screen 1048 wide
+            // - so ~1.15% of canvas width).
             ctx.save();
             ctx.beginPath();
-            const cornerR = size * 0.07;
+            const cornerR = canvasW * 0.0115;
             ctx.roundRect(0, 0, canvasW, canvasH, cornerR);
             ctx.fillStyle = css(theme.bg);
             ctx.fill();
@@ -1333,8 +1354,8 @@
                 ctx.stroke();
             };
 
-            drawDayHand(hrAngle, R * 0.52, R * 0.05);
-            drawDayHand(minAngle, R * 0.74, R * 0.035);
+            drawDayHand(hrAngle, R * 0.52, R * 0.045);
+            drawDayHand(minAngle, R * 0.74, R * 0.045);
 
             // Second hand
             const stip = polar(cx, cy, secAngle, R * 0.78);
