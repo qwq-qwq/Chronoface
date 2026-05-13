@@ -7,13 +7,13 @@ A minimalist analog clock screen saver for macOS, with a matching web demo.
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
 <p align="center">
-  <img src="Chronoface/Chronoface/thumbnail.png" alt="Chronoface preview" width="480">
+  <img src="assets/themes-grid.jpg" alt="All 16 Chronoface dial themes" width="720">
 </p>
 
 ## Links
 
 - [Landing page](https://chronoface.perek.rest)
-- [Live demo](https://chronoface.perek.rest/index.html)
+- [Live demo](https://chronoface.perek.rest/index.html) - the entire screen saver running in a browser tab.
 
 ## Features
 
@@ -80,6 +80,17 @@ swift generate_thumbnail.swift
 This re-renders `Chronoface/Chronoface/thumbnail.png` from the same drawing
 primitives the screen saver uses, so the System Settings preview always
 matches the current default theme.
+
+## Regenerating marketing assets
+
+```sh
+swift generate_marketing_assets.swift
+```
+
+Produces two files from the same drawing code as the screen saver:
+
+- `web/html/og-image.jpg` - 1200x630 social card (Noir dial + amber lume), referenced by `og:image` / `twitter:card` on the landing page.
+- `assets/themes-grid.jpg` - 4x4 grid of all 16 dial themes, used as the README hero above.
 
 ## License
 
