@@ -81,7 +81,9 @@ const CITIES = [
     { name: 'Beijing',      lat: 39.9042,  lon: 116.4074,  tz: 'Asia/Shanghai' },
     { name: 'Seoul',        lat: 37.5665,  lon: 126.9780,  tz: 'Asia/Seoul' },
     { name: 'Tel Aviv',     lat: 32.0853,  lon: 34.7818,   tz: 'Asia/Tel_Aviv' },
-    { name: 'Buenos Aires', lat: -34.6037, lon: -58.3816,  tz: 'America/Argentina/Buenos_Aires' }
+    { name: 'Buenos Aires', lat: -34.6037, lon: -58.3816,  tz: 'America/Argentina/Buenos_Aires' },
+    { name: 'Baku',         lat: 40.4093,  lon: 49.8671,   tz: 'Asia/Baku' },
+    { name: 'Brussels',     lat: 50.8503,  lon: 4.3517,    tz: 'Europe/Brussels' }
 ];
 
 // ─── Settings (localStorage) ───────────────────────────────────

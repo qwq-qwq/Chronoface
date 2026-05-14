@@ -505,6 +505,8 @@ let cities: [CityInfo] = [
     CityInfo(name: "Seoul",        lat: 37.5665,  lon: 126.9780,  tz: TimeZone(identifier: "Asia/Seoul")!),
     CityInfo(name: "Tel Aviv",     lat: 32.0853,  lon: 34.7818,   tz: TimeZone(identifier: "Asia/Tel_Aviv")!),
     CityInfo(name: "Buenos Aires", lat: -34.6037, lon: -58.3816,  tz: TimeZone(identifier: "America/Argentina/Buenos_Aires")!),
+    CityInfo(name: "Baku",         lat: 40.4093,  lon: 49.8671,   tz: TimeZone(identifier: "Asia/Baku")!),
+    CityInfo(name: "Brussels",     lat: 50.8503,  lon: 4.3517,    tz: TimeZone(identifier: "Europe/Brussels")!),
 ]
 
 // MARK: - Main screensaver view
