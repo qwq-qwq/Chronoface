@@ -669,20 +669,32 @@ class ChronofaceView: ScreenSaverView {
     }
 
     /// Effective night mode: resolves `.auto` using sunrise/sunset for the selected city.
+    /// Кешируется поминутно: solar trig дорогое, считать на каждом из ~30 кадров/сек незачем.
+    private var nightModeCache: (minute: Int, value: Bool)?
     private var isNightMode: Bool {
         switch nightModeOption {
         case .day:   return false
         case .night: return true
         case .auto:
+            let nowEpoch = Date().timeIntervalSince1970
+            let minute = Int(nowEpoch / 60.0)
+            if let cache = nightModeCache, cache.minute == minute {
+                return cache.value
+            }
             let cityName = SettingsStore.selectedCity
-            guard let city = cities.first(where: { $0.name == cityName }) else { return false }
+            guard let city = cities.first(where: { $0.name == cityName }) else {
+                nightModeCache = (minute, false)
+                return false
+            }
             let times = solarTimes(lat: city.lat, lon: city.lon, tz: city.tz)
             var calendar = Calendar.current
             calendar.timeZone = city.tz
             let now = Date()
             let hour = Double(calendar.component(.hour, from: now))
                      + Double(calendar.component(.minute, from: now)) / 60.0
-            return hour < times.sunrise || hour >= times.sunset
+            let value = hour < times.sunrise || hour >= times.sunset
+            nightModeCache = (minute, value)
+            return value
         }
     }
 
@@ -706,7 +718,17 @@ class ChronofaceView: ScreenSaverView {
         backgroundDim = SettingsStore.backgroundDim
         customBackgroundImage = SettingsStore.useCustomBackground ? BackgroundStore.loadCachedImage() : nil
         super.init(frame: frame, isPreview: isPreview)
-        animationTimeInterval = 1.0 / 30.0
+        animationTimeInterval = ChronofaceView.animationInterval(for: SettingsStore.currentMovement)
+    }
+
+    /// Адаптивная частота: Quartz и Mechanical не нуждаются в 30 FPS, секундная стрелка
+    /// у них дискретная. Digital оставляем плавным, но 24 FPS визуально неотличим от 30.
+    private static func animationInterval(for movement: MovementType) -> TimeInterval {
+        switch movement {
+        case .quartz: return 1.0 / 2.0      // двойная частота от тика, чтобы не было фазового сдвига
+        case .mechanical: return 1.0 / 10.0 // 8 beats/sec, 10 FPS ловит каждый бит
+        case .digital: return 1.0 / 24.0    // плавный sweep, 24 FPS неотличим от 30
+        }
     }
 
     @available(*, unavailable)
@@ -998,6 +1020,7 @@ class ChronofaceView: ScreenSaverView {
         let m = allMovements[sender.selectedSegment]
         movement = m
         SettingsStore.currentMovement = m
+        animationTimeInterval = ChronofaceView.animationInterval(for: m)
     }
 
     @objc private func showTempChanged(_ sender: NSButton) {
@@ -1362,11 +1385,54 @@ class ChronofaceView: ScreenSaverView {
         }
     }
 
+    /// Тугая bounding-зона циферблата плюс окошко температуры.
+    /// На неё ограничиваем `setNeedsDisplay` в анимации, чтобы не дёргать WindowServer
+    /// компоновкой полного экрана за каждым тиком.
+    private var animationDirtyRect: NSRect {
+        let radius = min(bounds.width, bounds.height) * 0.44
+        // Циферблат + минутные цифры выходят чуть за radius. Запас 1.15x.
+        let size = radius * 2.3
+        let cx = bounds.midX
+        let cy = bounds.midY
+        var dirty = NSRect(x: cx - size / 2, y: cy - size / 2, width: size, height: size)
+        if showTemperature, currentTemperature != nil {
+            // Зона температуры находится снизу по центру (см. drawTemperature).
+            let tempH = radius * 0.18
+            let tempArea = NSRect(x: bounds.midX - radius * 0.5,
+                                  y: max(0, bounds.midY - radius - tempH * 1.4),
+                                  width: radius, height: tempH * 1.5)
+            dirty = dirty.union(tempArea)
+        }
+        return dirty.intersection(bounds).integral
+    }
+
+    private var lastNightModeSig: Bool?
+    private var lastDaySig: Int?
+    private var lastTempSig: String?
+
     override func animateOneFrame() {
         if showTemperature {
             fetchWeatherIfNeeded()
         }
-        setNeedsDisplay(bounds)
+
+        // Полный invalidation только когда меняется что-то, лежащее в статическом слое.
+        let nightNow = isNightMode
+        let dayNow = showDate ? Calendar.current.component(.day, from: Date()) : 0
+        let tempNow = currentTemperature ?? ""
+
+        let nightChanged = lastNightModeSig != nightNow
+        let dayChanged = lastDaySig != dayNow
+        let tempChanged = lastTempSig != tempNow
+
+        lastNightModeSig = nightNow
+        lastDaySig = dayNow
+        lastTempSig = tempNow
+
+        if nightChanged || dayChanged || tempChanged {
+            setNeedsDisplay(bounds)
+        } else {
+            setNeedsDisplay(animationDirtyRect)
+        }
     }
 
     // MARK: - Drawing helpers
