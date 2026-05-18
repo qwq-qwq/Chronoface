@@ -23,6 +23,7 @@ A minimalist analog **watch face screen saver for macOS**: 16 dial themes, lumin
 - **Day / Night / Auto** — auto mode computes local sunrise/sunset from your city (NOAA solar equations, no network calls).
 - **Optional date complication** — tiny date window that matches the theme.
 - **Adjustable glow intensity** in the settings panel.
+- **Custom background**: bring your own wallpaper. Pick any image, or pull your current desktop background, with an adjustable dim that keeps the dial in focus.
 - **Native macOS screen saver** (`.saver` bundle) plus a pixel-identical web version sharing the same geometry.
 
 ## Installation (screen saver)
