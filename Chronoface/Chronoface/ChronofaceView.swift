@@ -644,6 +644,29 @@ class ChronofaceView: ScreenSaverView {
     private(set) var useCustomBackground: Bool
     private(set) var backgroundDim: CGFloat
     private var customBackgroundImage: NSImage?
+    private var customBackgroundVersion: Int = 0
+
+    // Cached static layer: everything that doesn't move frame-to-frame
+    // (фон, картинка, тики, цифры, окошко даты, температура).
+    private var staticLayer: CGImage?
+    private var staticLayerKey: StaticLayerKey?
+
+    private struct StaticLayerKey: Equatable {
+        let width: CGFloat
+        let height: CGFloat
+        let scale: CGFloat
+        let theme: String
+        let lume: String
+        let night: Bool
+        let showDate: Bool
+        let dayNumber: Int
+        let showTemp: Bool
+        let tempText: String
+        let glow: CGFloat
+        let useCustomBg: Bool
+        let dim: CGFloat
+        let bgVersion: Int
+    }
 
     /// Effective night mode: resolves `.auto` using sunrise/sunset for the selected city.
     private var isNightMode: Bool {
@@ -1038,6 +1061,7 @@ class ChronofaceView: ScreenSaverView {
         let enabled = sender.state == .on
         useCustomBackground = enabled
         SettingsStore.useCustomBackground = enabled
+        customBackgroundVersion &+= 1
         if enabled {
             customBackgroundImage = BackgroundStore.loadCachedImage()
             if customBackgroundImage == nil {
@@ -1099,6 +1123,7 @@ class ChronofaceView: ScreenSaverView {
         }
         if let _ = BackgroundStore.importImage(from: url) {
             customBackgroundImage = BackgroundStore.loadCachedImage()
+            customBackgroundVersion &+= 1
             if !useCustomBackground {
                 useCustomBackground = true
                 SettingsStore.useCustomBackground = true
@@ -1192,17 +1217,124 @@ class ChronofaceView: ScreenSaverView {
         let cy = height / 2.0
         let radius = min(width, height) * 0.44
 
-        // Background
+        let now = Date()
+        let calendar = Calendar.current
+
+        // Backing scale (Retina). При смене экрана пересоберётся через ключ.
+        let backingScale = window?.backingScaleFactor
+            ?? NSScreen.main?.backingScaleFactor
+            ?? 2.0
+
+        // Ключ статического слоя: всё, что может его инвалидировать.
+        let dayNumber = showDate ? calendar.component(.day, from: now) : 0
+        let key = StaticLayerKey(
+            width: width,
+            height: height,
+            scale: backingScale,
+            theme: SettingsStore.currentTheme.rawValue,
+            lume: lumeColorName.rawValue,
+            night: isNightMode,
+            showDate: showDate,
+            dayNumber: dayNumber,
+            showTemp: showTemperature,
+            tempText: showTemperature ? (currentTemperature ?? "") : "",
+            glow: glowIntensity,
+            useCustomBg: useCustomBackground,
+            dim: backgroundDim,
+            bgVersion: useCustomBackground ? customBackgroundVersion : 0
+        )
+        if staticLayer == nil || staticLayerKey != key {
+            staticLayer = renderStaticLayer(scale: backingScale, date: now)
+            staticLayerKey = key
+        }
+
+        if let layer = staticLayer {
+            ctx.draw(layer, in: bounds)
+        } else {
+            drawStaticElements(into: ctx, date: now)
+        }
+
+        let lumeColor = lumeColorName.color
+
+        let hours = CGFloat(calendar.component(.hour, from: now) % 12)
+        let minutes = CGFloat(calendar.component(.minute, from: now))
+        let seconds = CGFloat(calendar.component(.second, from: now))
+        let nanoseconds = CGFloat(calendar.component(.nanosecond, from: now))
+        let fractionalSeconds = nanoseconds / 1_000_000_000.0
+
+        let secondValue: CGFloat
+        switch movement {
+        case .quartz:
+            secondValue = seconds
+        case .mechanical:
+            let beats = floor(fractionalSeconds * 8.0) / 8.0
+            secondValue = seconds + beats
+        case .digital:
+            secondValue = seconds + fractionalSeconds
+        }
+
+        let hourAngle = ((hours + minutes / 60.0) / 12.0) * .pi * 2.0
+        let minuteAngle = ((minutes + secondValue / 60.0) / 60.0) * .pi * 2.0
+        let secondAngle = (secondValue / 60.0) * .pi * 2.0
+
+        drawHand(ctx: ctx, cx: cx, cy: cy, angle: hourAngle,
+                 length: radius * 0.48, width: radius * 0.045, tailLength: 0, lumeColor: lumeColor)
+        drawHand(ctx: ctx, cx: cx, cy: cy, angle: minuteAngle,
+                 length: radius * 0.68, width: radius * 0.045, tailLength: 0, lumeColor: lumeColor)
+        drawCenterDot(ctx: ctx, cx: cx, cy: cy, radius: radius)
+        drawSecondHand(ctx: ctx, cx: cx, cy: cy, angle: secondAngle, radius: radius)
+        drawSecondHandRing(ctx: ctx, cx: cx, cy: cy, radius: radius)
+        drawAxisPin(ctx: ctx, cx: cx, cy: cy, radius: radius)
+    }
+
+    /// Рендерит статический слой (всё кроме стрелок и центральной зоны) в offscreen bitmap.
+    private func renderStaticLayer(scale: CGFloat, date: Date) -> CGImage? {
+        let pxW = Int(bounds.width * scale)
+        let pxH = Int(bounds.height * scale)
+        guard pxW > 0, pxH > 0 else { return nil }
+
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let bitmapInfo = CGBitmapInfo.byteOrder32Little.rawValue
+            | CGImageAlphaInfo.premultipliedFirst.rawValue
+        guard let ctx = CGContext(
+            data: nil,
+            width: pxW,
+            height: pxH,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: colorSpace,
+            bitmapInfo: bitmapInfo
+        ) else { return nil }
+
+        ctx.scaleBy(x: scale, y: scale)
+
+        let nsCtx = NSGraphicsContext(cgContext: ctx, flipped: false)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = nsCtx
+        drawStaticElements(into: ctx, date: date)
+        NSGraphicsContext.restoreGraphicsState()
+
+        return ctx.makeImage()
+    }
+
+    /// Отрисовка статической части: фон, картинка, затемнение, тики, цифры, окошко даты, температура.
+    private func drawStaticElements(into ctx: CGContext, date: Date) {
+        let width = bounds.width
+        let height = bounds.height
+        let cx = width / 2.0
+        let cy = height / 2.0
+        let radius = min(width, height) * 0.44
+        let lumeColor = lumeColorName.color
+
         let effectiveBg = isNightMode ? NSColor.black : theme.background
         ctx.setFillColor(effectiveBg.cgColor)
         ctx.fill(bounds)
 
-        // Custom wallpaper (только в дневном режиме: ночной нужен чёрный для свечения lume)
         if useCustomBackground, !isNightMode, let image = customBackgroundImage {
             let imgSize = image.size
             if imgSize.width > 0, imgSize.height > 0 {
-                let scale = max(bounds.width / imgSize.width, bounds.height / imgSize.height)
-                let drawn = NSSize(width: imgSize.width * scale, height: imgSize.height * scale)
+                let s = max(bounds.width / imgSize.width, bounds.height / imgSize.height)
+                let drawn = NSSize(width: imgSize.width * s, height: imgSize.height * s)
                 let originX = bounds.minX + (bounds.width - drawn.width) / 2.0
                 let originY = bounds.minY + (bounds.height - drawn.height) / 2.0
                 let drawRect = NSRect(x: originX, y: originY, width: drawn.width, height: drawn.height)
@@ -1218,52 +1350,13 @@ class ChronofaceView: ScreenSaverView {
             }
         }
 
-        let lumeColor = lumeColorName.color
-
-        let now = Date()
-        let calendar = Calendar.current
-        let hours = CGFloat(calendar.component(.hour, from: now) % 12)
-        let minutes = CGFloat(calendar.component(.minute, from: now))
-        let seconds = CGFloat(calendar.component(.second, from: now))
-        let nanoseconds = CGFloat(calendar.component(.nanosecond, from: now))
-        let fractionalSeconds = nanoseconds / 1_000_000_000.0
-
-        // Second hand position depends on movement type
-        let secondValue: CGFloat
-        switch movement {
-        case .quartz:
-            // Tick once per second — no fractional part
-            secondValue = seconds
-        case .mechanical:
-            // 28,800 bph = 8 beats per second
-            let beats = floor(fractionalSeconds * 8.0) / 8.0
-            secondValue = seconds + beats
-        case .digital:
-            // Smooth continuous motion
-            secondValue = seconds + fractionalSeconds
-        }
-
         drawMinuteTicks(ctx: ctx, cx: cx, cy: cy, radius: radius, lumeColor: lumeColor)
         drawHourCapsules(ctx: ctx, cx: cx, cy: cy, radius: radius, lumeColor: lumeColor)
         drawHourNumbers(ctx: ctx, cx: cx, cy: cy, radius: radius, lumeColor: lumeColor)
         drawMinuteNumbers(ctx: ctx, cx: cx, cy: cy, radius: radius, lumeColor: lumeColor)
         if showDate {
-            drawDateWindow(ctx: ctx, cx: cx, cy: cy, radius: radius, date: now, lumeColor: lumeColor)
+            drawDateWindow(ctx: ctx, cx: cx, cy: cy, radius: radius, date: date, lumeColor: lumeColor)
         }
-
-        let hourAngle = ((hours + minutes / 60.0) / 12.0) * .pi * 2.0
-        let minuteAngle = ((minutes + secondValue / 60.0) / 60.0) * .pi * 2.0
-        let secondAngle = (secondValue / 60.0) * .pi * 2.0
-
-        drawHand(ctx: ctx, cx: cx, cy: cy, angle: hourAngle,
-                 length: radius * 0.48, width: radius * 0.045, tailLength: 0, lumeColor: lumeColor)
-        drawHand(ctx: ctx, cx: cx, cy: cy, angle: minuteAngle,
-                 length: radius * 0.68, width: radius * 0.045, tailLength: 0, lumeColor: lumeColor)
-        drawCenterDot(ctx: ctx, cx: cx, cy: cy, radius: radius)
-        drawSecondHand(ctx: ctx, cx: cx, cy: cy, angle: secondAngle, radius: radius)
-        drawSecondHandRing(ctx: ctx, cx: cx, cy: cy, radius: radius)
-        drawAxisPin(ctx: ctx, cx: cx, cy: cy, radius: radius)
-
         if showTemperature, let temp = currentTemperature {
             drawTemperature(ctx: ctx, width: width, height: height, text: temp, lumeColor: lumeColor)
         }
