@@ -1,5 +1,6 @@
 import ScreenSaver
 import AppKit
+import UniformTypeIdentifiers
 
 // MARK: - Theme definition
 
@@ -473,6 +474,126 @@ enum SettingsStore {
             UserDefaults.standard.set(Double(newValue), forKey: glowIntensityKey)
         }
     }
+
+    private static let useCustomBgKey = "ChronofaceUseCustomBackground"
+    private static let dimAmountKey = "ChronofaceBackgroundDim"
+
+    static var useCustomBackground: Bool {
+        get { UserDefaults.standard.bool(forKey: useCustomBgKey) }
+        set { UserDefaults.standard.set(newValue, forKey: useCustomBgKey) }
+    }
+
+    /// 0.0 … 0.8, default 0.4
+    static var backgroundDim: CGFloat {
+        get {
+            if UserDefaults.standard.object(forKey: dimAmountKey) == nil {
+                return 0.4
+            }
+            return CGFloat(UserDefaults.standard.double(forKey: dimAmountKey))
+        }
+        set {
+            UserDefaults.standard.set(Double(newValue), forKey: dimAmountKey)
+        }
+    }
+}
+
+// MARK: - Custom background storage
+
+enum BackgroundStore {
+    /// ~/Library/Application Support/Chronoface/
+    static func directory() -> URL? {
+        let fm = FileManager.default
+        guard let base = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        let dir = base.appendingPathComponent("Chronoface", isDirectory: true)
+        if !fm.fileExists(atPath: dir.path) {
+            try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
+        return dir
+    }
+
+    static func backgroundFileURL() -> URL? {
+        return directory()?.appendingPathComponent("background.jpg")
+    }
+
+    /// Возвращает URL волпейпера для главного экрана. На Sonoma+ может вернуть nil
+    /// для динамических обоев либо файл, к которому screensaver-процессу нет доступа.
+    static func currentWallpaperURL() -> URL? {
+        guard let screen = NSScreen.main else { return nil }
+        return NSWorkspace.shared.desktopImageURL(for: screen)
+    }
+
+    /// Целевой размер: пиксельный размер главного экрана (учитывает Retina).
+    private static func targetPixelSize() -> NSSize {
+        let screen = NSScreen.main ?? NSScreen.screens.first
+        let pts = screen?.frame.size ?? NSSize(width: 2560, height: 1440)
+        let scale = screen?.backingScaleFactor ?? 2.0
+        return NSSize(width: pts.width * scale, height: pts.height * scale)
+    }
+
+    /// Копирует и ресайзит картинку под размер главного экрана (aspectFill, центр).
+    /// Сохраняет как JPEG quality 0.9. Возвращает URL результата или nil.
+    @discardableResult
+    static func importImage(from sourceURL: URL) -> URL? {
+        guard let dst = backgroundFileURL() else { return nil }
+        guard let image = NSImage(contentsOf: sourceURL) else { return nil }
+
+        let target = targetPixelSize()
+        let src = image.size
+        guard src.width > 0, src.height > 0 else { return nil }
+
+        let scale = max(target.width / src.width, target.height / src.height)
+        let drawn = NSSize(width: src.width * scale, height: src.height * scale)
+        let originX = (target.width - drawn.width) / 2.0
+        let originY = (target.height - drawn.height) / 2.0
+
+        guard let bitmap = NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: Int(target.width),
+            pixelsHigh: Int(target.height),
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bytesPerRow: 0,
+            bitsPerPixel: 0
+        ) else { return nil }
+
+        NSGraphicsContext.saveGraphicsState()
+        guard let ctx = NSGraphicsContext(bitmapImageRep: bitmap) else {
+            NSGraphicsContext.restoreGraphicsState()
+            return nil
+        }
+        NSGraphicsContext.current = ctx
+        ctx.imageInterpolation = .high
+        image.draw(
+            in: NSRect(x: originX, y: originY, width: drawn.width, height: drawn.height),
+            from: .zero,
+            operation: .copy,
+            fraction: 1.0
+        )
+        NSGraphicsContext.restoreGraphicsState()
+
+        guard let data = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.9]) else {
+            return nil
+        }
+        do {
+            try data.write(to: dst, options: .atomic)
+            return dst
+        } catch {
+            return nil
+        }
+    }
+
+    static func loadCachedImage() -> NSImage? {
+        guard let url = backgroundFileURL(),
+              FileManager.default.fileExists(atPath: url.path) else {
+            return nil
+        }
+        return NSImage(contentsOf: url)
+    }
 }
 
 // MARK: - City database
@@ -520,6 +641,9 @@ class ChronofaceView: ScreenSaverView {
     private(set) var nightModeOption: NightModeOption
     private(set) var lumeColorName: LumeColorName
     private(set) var glowIntensity: CGFloat
+    private(set) var useCustomBackground: Bool
+    private(set) var backgroundDim: CGFloat
+    private var customBackgroundImage: NSImage?
 
     /// Effective night mode: resolves `.auto` using sunrise/sunset for the selected city.
     private var isNightMode: Bool {
@@ -555,6 +679,9 @@ class ChronofaceView: ScreenSaverView {
         nightModeOption = SettingsStore.nightModeOption
         lumeColorName = SettingsStore.lumeColor
         glowIntensity = SettingsStore.glowIntensity
+        useCustomBackground = SettingsStore.useCustomBackground
+        backgroundDim = SettingsStore.backgroundDim
+        customBackgroundImage = SettingsStore.useCustomBackground ? BackgroundStore.loadCachedImage() : nil
         super.init(frame: frame, isPreview: isPreview)
         animationTimeInterval = 1.0 / 30.0
     }
@@ -598,11 +725,12 @@ class ChronofaceView: ScreenSaverView {
         let gap: CGFloat = 18
         let windowWidth = marginX * 2 + CGFloat(cols) * circleSize + CGFloat(cols - 1) * hSpacing
 
-        // Layout from bottom: OK, Movement, City, Checkboxes, LumeRow, GlowSlider, NightMode, Row1, Row0, Theme label
+        // Layout from bottom: OK, BgDim, BgButtons, Movement, City, Checkboxes, LumeRow, GlowSlider, NightMode, Row1, Row0, Theme label
         let okH: CGFloat = 28, movH: CGFloat = 24, cityH: CGFloat = 26, cbH: CGFloat = 20, themeH: CGFloat = 20
         let nightH: CGFloat = 28, lumeRowH: CGFloat = lumeCircleSize, glowH: CGFloat = 24
+        let bgButtonsH: CGFloat = 24, bgDimH: CGFloat = 22
         let rowH = circleSize + 1 + labelHeight
-        let windowHeight = 10 + okH + gap + movH + gap + cityH + gap + cbH + gap + lumeRowH + gap + glowH + gap + nightH + gap + rowH + gap + rowH + gap + themeH + 10
+        let windowHeight = 10 + okH + gap + bgDimH + gap + bgButtonsH + gap + movH + gap + cityH + gap + cbH + gap + lumeRowH + gap + glowH + gap + nightH + gap + rowH + gap + rowH + gap + themeH + 10
 
         let window = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: windowWidth, height: windowHeight),
@@ -616,7 +744,9 @@ class ChronofaceView: ScreenSaverView {
 
         // Positions from bottom up
         let okY: CGFloat = 10
-        let movY = okY + okH + gap
+        let bgDimY = okY + okH + gap
+        let bgButtonsY = bgDimY + bgDimH + gap
+        let movY = bgButtonsY + bgButtonsH + gap
         let cityY = movY + movH + gap
         let cbY = cityY + cityH + gap
         let lumeRowY = cbY + cbH + gap
@@ -771,6 +901,40 @@ class ChronofaceView: ScreenSaverView {
         segment.selectedSegment = MovementType.allCases.firstIndex(of: SettingsStore.currentMovement) ?? 2
         contentView.addSubview(segment)
 
+        // Background section, row 1: checkbox + Choose + Use current wallpaper
+        let bgCheckbox = NSButton(checkboxWithTitle: "Custom background",
+                                   target: self,
+                                   action: #selector(useCustomBackgroundChanged(_:)))
+        bgCheckbox.state = SettingsStore.useCustomBackground ? .on : .off
+        bgCheckbox.frame = NSRect(x: 20, y: bgButtonsY + 2, width: 150, height: bgButtonsH)
+        contentView.addSubview(bgCheckbox)
+
+        let chooseButton = NSButton(title: "Choose…",
+                                     target: self,
+                                     action: #selector(chooseBackgroundFile(_:)))
+        chooseButton.bezelStyle = .rounded
+        chooseButton.frame = NSRect(x: 175, y: bgButtonsY, width: 90, height: bgButtonsH)
+        contentView.addSubview(chooseButton)
+
+        let wallpaperButton = NSButton(title: "Use current wallpaper",
+                                        target: self,
+                                        action: #selector(useCurrentWallpaper(_:)))
+        wallpaperButton.bezelStyle = .rounded
+        wallpaperButton.frame = NSRect(x: 270, y: bgButtonsY, width: windowWidth - 290, height: bgButtonsH)
+        contentView.addSubview(wallpaperButton)
+
+        // Background section, row 2: Dim slider
+        let dimLabel = NSTextField(labelWithString: "Dim:")
+        dimLabel.font = NSFont.systemFont(ofSize: 13, weight: .medium)
+        dimLabel.frame = NSRect(x: 20, y: bgDimY + 2, width: 40, height: 20)
+        contentView.addSubview(dimLabel)
+
+        let dimSlider = NSSlider(value: Double(SettingsStore.backgroundDim),
+                                  minValue: 0.0, maxValue: 0.8,
+                                  target: self, action: #selector(dimAmountChanged(_:)))
+        dimSlider.frame = NSRect(x: 75, y: bgDimY, width: windowWidth - 95, height: bgDimH)
+        contentView.addSubview(dimSlider)
+
         // OK button
         let okButton = NSButton(title: "OK", target: self, action: #selector(closeConfigSheet(_:)))
         okButton.bezelStyle = .rounded
@@ -870,6 +1034,109 @@ class ChronofaceView: ScreenSaverView {
         }
     }
 
+    @objc private func useCustomBackgroundChanged(_ sender: NSButton) {
+        let enabled = sender.state == .on
+        useCustomBackground = enabled
+        SettingsStore.useCustomBackground = enabled
+        if enabled {
+            customBackgroundImage = BackgroundStore.loadCachedImage()
+            if customBackgroundImage == nil {
+                // Нет картинки: подскажем пользователю
+                let alert = NSAlert()
+                alert.messageText = "No background image yet"
+                alert.informativeText = "Use \"Choose…\" to pick an image, or \"Use current wallpaper\" to grab the current desktop background."
+                alert.alertStyle = .informational
+                if let window = sender.window {
+                    alert.beginSheetModal(for: window, completionHandler: nil)
+                } else {
+                    alert.runModal()
+                }
+            }
+        } else {
+            customBackgroundImage = nil
+        }
+        setNeedsDisplay(bounds)
+    }
+
+    @objc private func chooseBackgroundFile(_ sender: NSButton) {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowedContentTypes = [.image]
+        panel.prompt = "Use"
+
+        let complete: (NSApplication.ModalResponse) -> Void = { [weak self] response in
+            guard response == .OK, let url = panel.url, let self = self else { return }
+            let needsScope = url.startAccessingSecurityScopedResource()
+            defer { if needsScope { url.stopAccessingSecurityScopedResource() } }
+            if let _ = BackgroundStore.importImage(from: url) {
+                self.customBackgroundImage = BackgroundStore.loadCachedImage()
+                if !self.useCustomBackground {
+                    self.useCustomBackground = true
+                    SettingsStore.useCustomBackground = true
+                    self.refreshBackgroundCheckbox(in: sender.superview, on: true)
+                }
+                self.setNeedsDisplay(self.bounds)
+            } else {
+                self.showImportFailureAlert(window: sender.window,
+                                            message: "Couldn't read the selected image.")
+            }
+        }
+
+        if let window = sender.window {
+            panel.beginSheetModal(for: window, completionHandler: complete)
+        } else {
+            complete(panel.runModal())
+        }
+    }
+
+    @objc private func useCurrentWallpaper(_ sender: NSButton) {
+        guard let url = BackgroundStore.currentWallpaperURL() else {
+            showImportFailureAlert(window: sender.window,
+                                   message: "Couldn't locate the current wallpaper. It may be a dynamic wallpaper; pick a file manually with Choose…")
+            return
+        }
+        if let _ = BackgroundStore.importImage(from: url) {
+            customBackgroundImage = BackgroundStore.loadCachedImage()
+            if !useCustomBackground {
+                useCustomBackground = true
+                SettingsStore.useCustomBackground = true
+                refreshBackgroundCheckbox(in: sender.superview, on: true)
+            }
+            setNeedsDisplay(bounds)
+        } else {
+            showImportFailureAlert(window: sender.window,
+                                   message: "Couldn't read the current wallpaper file. Screensaver may not have access; pick a file manually with Choose…")
+        }
+    }
+
+    @objc private func dimAmountChanged(_ sender: NSSlider) {
+        backgroundDim = CGFloat(sender.doubleValue)
+        SettingsStore.backgroundDim = backgroundDim
+        setNeedsDisplay(bounds)
+    }
+
+    private func refreshBackgroundCheckbox(in container: NSView?, on: Bool) {
+        guard let container = container else { return }
+        for case let button as NSButton in container.subviews
+            where button.title == "Custom background" {
+            button.state = on ? .on : .off
+        }
+    }
+
+    private func showImportFailureAlert(window: NSWindow?, message: String) {
+        let alert = NSAlert()
+        alert.messageText = "Background not loaded"
+        alert.informativeText = message
+        alert.alertStyle = .warning
+        if let window = window {
+            alert.beginSheetModal(for: window, completionHandler: nil)
+        } else {
+            alert.runModal()
+        }
+    }
+
     @objc private func closeConfigSheet(_ sender: NSButton) {
         guard let window = sender.window else { return }
         window.sheetParent?.endSheet(window)
@@ -929,6 +1196,27 @@ class ChronofaceView: ScreenSaverView {
         let effectiveBg = isNightMode ? NSColor.black : theme.background
         ctx.setFillColor(effectiveBg.cgColor)
         ctx.fill(bounds)
+
+        // Custom wallpaper (только в дневном режиме: ночной нужен чёрный для свечения lume)
+        if useCustomBackground, !isNightMode, let image = customBackgroundImage {
+            let imgSize = image.size
+            if imgSize.width > 0, imgSize.height > 0 {
+                let scale = max(bounds.width / imgSize.width, bounds.height / imgSize.height)
+                let drawn = NSSize(width: imgSize.width * scale, height: imgSize.height * scale)
+                let originX = bounds.minX + (bounds.width - drawn.width) / 2.0
+                let originY = bounds.minY + (bounds.height - drawn.height) / 2.0
+                let drawRect = NSRect(x: originX, y: originY, width: drawn.width, height: drawn.height)
+                NSGraphicsContext.saveGraphicsState()
+                NSGraphicsContext.current?.imageInterpolation = .high
+                image.draw(in: drawRect, from: .zero, operation: .copy, fraction: 1.0)
+                NSGraphicsContext.restoreGraphicsState()
+                let clamped = max(0.0, min(0.85, backgroundDim))
+                if clamped > 0.001 {
+                    ctx.setFillColor(NSColor(white: 0.0, alpha: clamped).cgColor)
+                    ctx.fill(bounds)
+                }
+            }
+        }
 
         let lumeColor = lumeColorName.color
 
