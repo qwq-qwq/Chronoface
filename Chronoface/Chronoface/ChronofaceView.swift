@@ -651,6 +651,27 @@ class ChronofaceView: ScreenSaverView {
     private var staticLayer: CGImage?
     private var staticLayerKey: StaticLayerKey?
 
+    // Hand sprites: пре-рендеренные стрелки с уже запечённой тенью / lume-свечением.
+    // Это убирает шадоу-блюр из горячего пути (он идёт через Metal-кернел на GPU).
+    private struct HandSprite {
+        let image: CGImage
+        let spriteSize: CGSize  // в point-юнитах (как в bounds)
+        let pivotY: CGFloat     // расстояние от нижнего края спрайта до точки вращения
+    }
+
+    private struct HandSpritesKey: Equatable {
+        let radius: CGFloat
+        let theme: String
+        let lume: String
+        let night: Bool
+        let glow: CGFloat
+        let scale: CGFloat
+    }
+
+    private var hourSprite: HandSprite?
+    private var minuteSprite: HandSprite?
+    private var handSpritesKey: HandSpritesKey?
+
     private struct StaticLayerKey: Equatable {
         let width: CGFloat
         let height: CGFloat
@@ -1270,6 +1291,7 @@ class ChronofaceView: ScreenSaverView {
             staticLayer = renderStaticLayer(scale: backingScale, date: now)
             staticLayerKey = key
         }
+        ensureHandSprites(scale: backingScale)
 
         if let layer = staticLayer {
             ctx.draw(layer, in: bounds)
@@ -1300,14 +1322,165 @@ class ChronofaceView: ScreenSaverView {
         let minuteAngle = ((minutes + secondValue / 60.0) / 60.0) * .pi * 2.0
         let secondAngle = (secondValue / 60.0) * .pi * 2.0
 
-        drawHand(ctx: ctx, cx: cx, cy: cy, angle: hourAngle,
-                 length: radius * 0.48, width: radius * 0.045, tailLength: 0, lumeColor: lumeColor)
-        drawHand(ctx: ctx, cx: cx, cy: cy, angle: minuteAngle,
-                 length: radius * 0.68, width: radius * 0.045, tailLength: 0, lumeColor: lumeColor)
+        if let sprite = hourSprite {
+            drawHandSprite(sprite, cx: cx, cy: cy, angle: hourAngle, in: ctx)
+        } else {
+            drawHand(ctx: ctx, cx: cx, cy: cy, angle: hourAngle,
+                     length: radius * 0.48, width: radius * 0.045, tailLength: 0, lumeColor: lumeColor)
+        }
+        if let sprite = minuteSprite {
+            drawHandSprite(sprite, cx: cx, cy: cy, angle: minuteAngle, in: ctx)
+        } else {
+            drawHand(ctx: ctx, cx: cx, cy: cy, angle: minuteAngle,
+                     length: radius * 0.68, width: radius * 0.045, tailLength: 0, lumeColor: lumeColor)
+        }
         drawCenterDot(ctx: ctx, cx: cx, cy: cy, radius: radius)
         drawSecondHand(ctx: ctx, cx: cx, cy: cy, angle: secondAngle, radius: radius)
         drawSecondHandRing(ctx: ctx, cx: cx, cy: cy, radius: radius)
         drawAxisPin(ctx: ctx, cx: cx, cy: cy, radius: radius)
+    }
+
+    private func ensureHandSprites(scale: CGFloat) {
+        let radius = min(bounds.width, bounds.height) * 0.44
+        let key = HandSpritesKey(
+            radius: radius,
+            theme: SettingsStore.currentTheme.rawValue,
+            lume: lumeColorName.rawValue,
+            night: isNightMode,
+            glow: glowIntensity,
+            scale: scale
+        )
+        if handSpritesKey == key, hourSprite != nil, minuteSprite != nil { return }
+
+        let handWidth = radius * 0.045
+        hourSprite = renderHandSprite(length: radius * 0.48, width: handWidth, scale: scale)
+        minuteSprite = renderHandSprite(length: radius * 0.68, width: handWidth, scale: scale)
+        handSpritesKey = key
+    }
+
+    /// Рендерит стрелку в собственный bitmap-контекст, стрелка указывает вверх (положительный Y).
+    /// Тень / glow запечена в пиксели, чтобы в горячем пути не платить за shadow-blur на каждом кадре.
+    private func renderHandSprite(length: CGFloat, width: CGFloat, scale: CGFloat) -> HandSprite? {
+        let radius = min(bounds.width, bounds.height) * 0.44
+        let neckLength = radius * 0.085
+        let shadowPad = max(width * 3.0, radius * 0.05)
+        let spriteW = max(width * 5.0, shadowPad * 2.0)
+        let spriteH = length + 2.0 * shadowPad
+        let pivotY = shadowPad
+
+        let pxW = Int(ceil(spriteW * scale))
+        let pxH = Int(ceil(spriteH * scale))
+        guard pxW > 0, pxH > 0 else { return nil }
+
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let bitmapInfo = CGBitmapInfo.byteOrder32Little.rawValue
+            | CGImageAlphaInfo.premultipliedFirst.rawValue
+        guard let ctx = CGContext(
+            data: nil,
+            width: pxW,
+            height: pxH,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: colorSpace,
+            bitmapInfo: bitmapInfo
+        ) else { return nil }
+        ctx.scaleBy(x: scale, y: scale)
+
+        let lumeColor = lumeColorName.color
+        let cx = spriteW / 2.0
+        let pivot = CGPoint(x: cx, y: pivotY)
+        let neckEnd = CGPoint(x: cx, y: pivotY + neckLength)
+        let bodyStart = neckEnd
+        let tip = CGPoint(x: cx, y: pivotY + length)
+
+        if isNightMode {
+            ctx.setStrokeColor(NSColor(white: 0.12, alpha: 0.6).cgColor)
+            ctx.setLineWidth(width)
+            ctx.setLineCap(.round)
+            ctx.move(to: bodyStart)
+            ctx.addLine(to: tip)
+            ctx.strokePath()
+
+            ctx.setStrokeColor(NSColor(white: 0.12, alpha: 0.6).cgColor)
+            ctx.setLineWidth(width * 0.30)
+            ctx.setLineCap(.round)
+            ctx.move(to: pivot)
+            ctx.addLine(to: neckEnd)
+            ctx.strokePath()
+
+            ctx.saveGState()
+            ctx.setShadow(
+                offset: .zero,
+                blur: width * 2.5 * glowIntensity,
+                color: lumeColor.withAlphaComponent(0.7 * glowIntensity).cgColor
+            )
+            ctx.setStrokeColor(lumeColor.cgColor)
+            ctx.setLineWidth(width * 0.45)
+            ctx.setLineCap(.round)
+            ctx.move(to: bodyStart)
+            ctx.addLine(to: tip)
+            ctx.strokePath()
+            ctx.restoreGState()
+
+            ctx.setStrokeColor(lumeColor.cgColor)
+            ctx.setLineWidth(width * 0.3)
+            ctx.setLineCap(.round)
+            ctx.move(to: bodyStart)
+            ctx.addLine(to: tip)
+            ctx.strokePath()
+        } else {
+            ctx.saveGState()
+            ctx.setShadow(
+                offset: CGSize(width: width * 0.3, height: -width * 0.5),
+                blur: width * 1.5,
+                color: theme.handShadow.cgColor
+            )
+            ctx.setStrokeColor(theme.handColor.cgColor)
+            ctx.setLineWidth(width)
+            ctx.setLineCap(.round)
+            ctx.move(to: bodyStart)
+            ctx.addLine(to: tip)
+            ctx.strokePath()
+            ctx.restoreGState()
+
+            ctx.setStrokeColor(theme.handColor.cgColor)
+            ctx.setLineWidth(width * 0.30)
+            ctx.setLineCap(.round)
+            ctx.move(to: pivot)
+            ctx.addLine(to: neckEnd)
+            ctx.strokePath()
+
+            ctx.setStrokeColor(NSColor(red: 0.78, green: 0.90, blue: 0.72, alpha: 0.35).cgColor)
+            ctx.setLineWidth(width * 0.4)
+            ctx.setLineCap(.round)
+            ctx.move(to: bodyStart)
+            ctx.addLine(to: tip)
+            ctx.strokePath()
+        }
+
+        guard let image = ctx.makeImage() else { return nil }
+        return HandSprite(
+            image: image,
+            spriteSize: CGSize(width: spriteW, height: spriteH),
+            pivotY: pivotY
+        )
+    }
+
+    private func drawHandSprite(_ sprite: HandSprite,
+                                cx: CGFloat,
+                                cy: CGFloat,
+                                angle: CGFloat,
+                                in ctx: CGContext) {
+        ctx.saveGState()
+        ctx.translateBy(x: cx, y: cy)
+        ctx.rotate(by: -angle)
+        ctx.draw(sprite.image, in: CGRect(
+            x: -sprite.spriteSize.width / 2.0,
+            y: -sprite.pivotY,
+            width: sprite.spriteSize.width,
+            height: sprite.spriteSize.height
+        ))
+        ctx.restoreGState()
     }
 
     /// Рендерит статический слой (всё кроме стрелок и центральной зоны) в offscreen bitmap.
