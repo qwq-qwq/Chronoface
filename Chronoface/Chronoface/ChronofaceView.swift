@@ -496,53 +496,40 @@ enum SettingsStore {
         }
     }
 
-    private static let handsColorKey = "ChronofaceHandsColor"
-    private static let pillsColorKey = "ChronofacePillsColor"
-    private static let linkHandsPillsKey = "ChronofaceLinkHandsPills"
+    private static let accentColorKey = "ChronofaceAccentColor"
+    private static let digitsColorKey = "ChronofaceDigitsColor"
 
-    /// nil = use theme's handColor
-    static var handsColorName: LumeColorName? {
+    /// Цвет стрелок + пилюль (часовых меток). nil = брать handColor из темы.
+    static var accentColorName: LumeColorName? {
         get {
-            guard let raw = UserDefaults.standard.string(forKey: handsColorKey),
+            guard let raw = UserDefaults.standard.string(forKey: accentColorKey),
                   !raw.isEmpty,
                   let c = LumeColorName(rawValue: raw) else { return nil }
             return c
         }
         set {
             if let v = newValue {
-                UserDefaults.standard.set(v.rawValue, forKey: handsColorKey)
+                UserDefaults.standard.set(v.rawValue, forKey: accentColorKey)
             } else {
-                UserDefaults.standard.removeObject(forKey: handsColorKey)
+                UserDefaults.standard.removeObject(forKey: accentColorKey)
             }
         }
     }
 
-    /// nil = use theme's handColor
-    static var pillsColorName: LumeColorName? {
+    /// Цвет цифр + минутных засечек. nil = брать из темы (numberColor / tickColor).
+    static var digitsColorName: LumeColorName? {
         get {
-            guard let raw = UserDefaults.standard.string(forKey: pillsColorKey),
+            guard let raw = UserDefaults.standard.string(forKey: digitsColorKey),
                   !raw.isEmpty,
                   let c = LumeColorName(rawValue: raw) else { return nil }
             return c
         }
         set {
             if let v = newValue {
-                UserDefaults.standard.set(v.rawValue, forKey: pillsColorKey)
+                UserDefaults.standard.set(v.rawValue, forKey: digitsColorKey)
             } else {
-                UserDefaults.standard.removeObject(forKey: pillsColorKey)
+                UserDefaults.standard.removeObject(forKey: digitsColorKey)
             }
-        }
-    }
-
-    static var linkHandsPills: Bool {
-        get {
-            if UserDefaults.standard.object(forKey: linkHandsPillsKey) == nil {
-                return true
-            }
-            return UserDefaults.standard.bool(forKey: linkHandsPillsKey)
-        }
-        set {
-            UserDefaults.standard.set(newValue, forKey: linkHandsPillsKey)
         }
     }
 }
@@ -693,13 +680,13 @@ class ChronofaceView: ScreenSaverView {
     private(set) var glowIntensity: CGFloat
     private(set) var useCustomBackground: Bool
     private(set) var backgroundDim: CGFloat
-    private(set) var handsColorName: LumeColorName?
-    private(set) var pillsColorName: LumeColorName?
-    private(set) var linkHandsPills: Bool
+    private(set) var accentColorName: LumeColorName?
+    private(set) var digitsColorName: LumeColorName?
     private var customBackgroundImage: NSImage?
     private var customBackgroundVersion: Int = 0
 
     private weak var nightSegmentControl: NSSegmentedControl?
+    private weak var glowSliderControl: NSSlider?
 
     // Cached static layer: everything that doesn't move frame-to-frame
     // (фон, картинка, тики, цифры, окошко даты, температура).
@@ -721,7 +708,7 @@ class ChronofaceView: ScreenSaverView {
         let night: Bool
         let glow: CGFloat
         let scale: CGFloat
-        let handsColor: String
+        let accentColor: String  // единый цвет hands + pills
     }
 
     private var hourSprite: HandSprite?
@@ -743,7 +730,8 @@ class ChronofaceView: ScreenSaverView {
         let useCustomBg: Bool
         let dim: CGFloat
         let bgVersion: Int
-        let pillsColor: String
+        let accentColor: String  // hands + pills
+        let digitsColor: String  // numbers + minute ticks
     }
 
     /// Effective night mode: resolves `.auto` using sunrise/sunset for the selected city.
@@ -779,14 +767,19 @@ class ChronofaceView: ScreenSaverView {
         }
     }
 
-    /// Цвет стрелок в дневном режиме: пользовательский override либо theme.handColor.
-    private var effectiveHandsColor: NSColor {
-        return handsColorName?.color ?? theme.handColor
+    /// Accent: единый цвет стрелок + пилюль (часовых меток). Hands и Pills всегда совпадают.
+    private var effectiveAccentColor: NSColor {
+        return accentColorName?.color ?? theme.handColor
     }
 
-    /// Цвет пилюль (часовых меток) в дневном режиме: override либо theme.handColor.
-    private var effectivePillsColor: NSColor {
-        return pillsColorName?.color ?? theme.handColor
+    /// Цвет цифр (часовых и минутных) + минутных засечек.
+    private var effectiveDigitsColor: NSColor {
+        return digitsColorName?.color ?? theme.numberColor
+    }
+
+    /// Цвет минутных засечек. По умолчанию theme.tickColor; при override - digits color.
+    private var effectiveTickColor: NSColor {
+        return digitsColorName?.color ?? theme.tickColor
     }
 
     // Weather data
@@ -807,9 +800,8 @@ class ChronofaceView: ScreenSaverView {
         glowIntensity = SettingsStore.glowIntensity
         useCustomBackground = SettingsStore.useCustomBackground
         backgroundDim = SettingsStore.backgroundDim
-        handsColorName = SettingsStore.handsColorName
-        pillsColorName = SettingsStore.pillsColorName
-        linkHandsPills = SettingsStore.linkHandsPills
+        accentColorName = SettingsStore.accentColorName
+        digitsColorName = SettingsStore.digitsColorName
         customBackgroundImage = SettingsStore.useCustomBackground ? BackgroundStore.loadCachedImage() : nil
         super.init(frame: frame, isPreview: isPreview)
         animationTimeInterval = ChronofaceView.animationInterval(for: SettingsStore.currentMovement)
@@ -853,7 +845,26 @@ class ChronofaceView: ScreenSaverView {
         return true
     }
 
+    /// ScreenSaverEngine читает `configureSheet` каждый раз при открытии настроек.
+    /// Если каждый раз создавать новый NSPanel, старые панели накапливают цепочки
+    /// target/action на self и недетерминированно держатся в памяти, что приводит
+    /// к тому, что после нескольких открытий лист настроек начинает странно вести себя
+    /// (пустое окно, повисший sheet, потерянный focus). Кешируем единственный экземпляр.
+    private var cachedConfigureSheet: NSWindow?
+
     override var configureSheet: NSWindow? {
+        if let cached = cachedConfigureSheet {
+            return cached
+        }
+        let panel = buildConfigureSheet()
+        cachedConfigureSheet = panel
+        // Расставляем enabled/dim состояние для контролов, зависящих от custom bg.
+        // Должно вызываться после set cachedConfigureSheet, т.к. сам функция читает оттуда.
+        refreshCustomBgDependentControls()
+        return panel
+    }
+
+    private func buildConfigureSheet() -> NSWindow? {
         let cols = 8
         let circleSize: CGFloat = 36
         let lumeCircleSize: CGFloat = 20
@@ -865,17 +876,16 @@ class ChronofaceView: ScreenSaverView {
         let windowWidth = marginX * 2 + CGFloat(cols) * circleSize + CGFloat(cols - 1) * hSpacing
 
         // Layout from bottom: OK, BgDim, BgButtons, Movement, City, Checkboxes,
-        //   Link, HandsRow, PillsRow, LumeRow, Glow, NightMode, Row1, Row0, ThemeLabel.
+        //   DigitsRow, AccentRow, LumeRow, Glow, NightMode, Row1, Row0, ThemeLabel.
         let okH: CGFloat = 28, movH: CGFloat = 24, cityH: CGFloat = 26, cbH: CGFloat = 20, themeH: CGFloat = 20
         let nightH: CGFloat = 28, lumeRowH: CGFloat = lumeCircleSize, glowH: CGFloat = 24
         let bgButtonsH: CGFloat = 24, bgDimH: CGFloat = 22
-        // Pills/Hands ряды на 1 кружок больше (15 = Theme + 14 lume), поэтому компактнее.
+        // Accent/Digits ряды на 1 кружок больше (15 = Theme + 14 lume), поэтому компактнее.
         let smallCircleSize: CGFloat = 17
         let smallHSpacing: CGFloat = 2
         let pillsRowH: CGFloat = smallCircleSize, handsRowH: CGFloat = smallCircleSize
-        let linkH: CGFloat = 20
         let rowH = circleSize + 1 + labelHeight
-        let windowHeight = 10 + okH + gap + bgDimH + gap + bgButtonsH + gap + movH + gap + cityH + gap + cbH + gap + linkH + gap + handsRowH + gap + pillsRowH + gap + lumeRowH + gap + glowH + gap + nightH + gap + rowH + gap + rowH + gap + themeH + 10
+        let windowHeight = 10 + okH + gap + bgDimH + gap + bgButtonsH + gap + movH + gap + cityH + gap + cbH + gap + handsRowH + gap + pillsRowH + gap + lumeRowH + gap + glowH + gap + nightH + gap + rowH + gap + rowH + gap + themeH + 10
 
         let window = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: windowWidth, height: windowHeight),
@@ -884,6 +894,9 @@ class ChronofaceView: ScreenSaverView {
             defer: false
         )
         window.title = "Chronoface"
+        // Под ARC lifetime окна управляется `cachedConfigureSheet`. Иначе close()
+        // мог бы освободить объект, а кешированная ссылка стала бы зомби.
+        window.isReleasedWhenClosed = false
 
         let contentView = NSView(frame: NSRect(x: 0, y: 0, width: windowWidth, height: windowHeight))
 
@@ -894,8 +907,7 @@ class ChronofaceView: ScreenSaverView {
         let movY = bgButtonsY + bgButtonsH + gap
         let cityY = movY + movH + gap
         let cbY = cityY + cityH + gap
-        let linkY = cbY + cbH + gap
-        let handsRowY = linkY + linkH + gap
+        let handsRowY = cbY + cbH + gap
         let pillsRowY = handsRowY + handsRowH + gap
         let lumeRowY = pillsRowY + pillsRowH + gap
         let glowY = lumeRowY + lumeRowH + gap
@@ -1011,42 +1023,35 @@ class ChronofaceView: ScreenSaverView {
                                    target: self, action: #selector(glowIntensityChanged(_:)))
         glowSlider.frame = NSRect(x: 75, y: glowY, width: windowWidth - 95, height: glowH)
         contentView.addSubview(glowSlider)
+        self.glowSliderControl = glowSlider
 
-        // Pills color row
-        let pillsLabel = NSTextField(labelWithString: "Pills:")
-        pillsLabel.font = NSFont.systemFont(ofSize: 13, weight: .medium)
-        pillsLabel.frame = NSRect(x: 20, y: pillsRowY - 3, width: 50, height: 20)
-        contentView.addSubview(pillsLabel)
+        // Accent color row (hands + pills, единый цвет)
+        let accentLabel = NSTextField(labelWithString: "Hands:")
+        accentLabel.font = NSFont.systemFont(ofSize: 13, weight: .medium)
+        accentLabel.frame = NSRect(x: 20, y: pillsRowY - 3, width: 60, height: 20)
+        contentView.addSubview(accentLabel)
         addColorRow(into: contentView,
                     y: pillsRowY,
                     rowWidth: windowWidth,
                     circleSize: smallCircleSize,
                     hSpacing: smallHSpacing,
                     tagBase: 2000,
-                    selected: SettingsStore.pillsColorName,
-                    action: #selector(pillsColorClicked(_:)))
+                    selected: SettingsStore.accentColorName,
+                    action: #selector(accentColorClicked(_:)))
 
-        // Hands color row
-        let handsLabel = NSTextField(labelWithString: "Hands:")
-        handsLabel.font = NSFont.systemFont(ofSize: 13, weight: .medium)
-        handsLabel.frame = NSRect(x: 20, y: handsRowY - 3, width: 60, height: 20)
-        contentView.addSubview(handsLabel)
+        // Digits color row (часовые/минутные цифры + минутные засечки)
+        let digitsLabel = NSTextField(labelWithString: "Digits:")
+        digitsLabel.font = NSFont.systemFont(ofSize: 13, weight: .medium)
+        digitsLabel.frame = NSRect(x: 20, y: handsRowY - 3, width: 60, height: 20)
+        contentView.addSubview(digitsLabel)
         addColorRow(into: contentView,
                     y: handsRowY,
                     rowWidth: windowWidth,
                     circleSize: smallCircleSize,
                     hSpacing: smallHSpacing,
                     tagBase: 3000,
-                    selected: SettingsStore.handsColorName,
-                    action: #selector(handsColorClicked(_:)))
-
-        // Link checkbox
-        let linkCheckbox = NSButton(checkboxWithTitle: "Link hands & pills",
-                                    target: self,
-                                    action: #selector(linkHandsPillsChanged(_:)))
-        linkCheckbox.state = SettingsStore.linkHandsPills ? .on : .off
-        linkCheckbox.frame = NSRect(x: 20, y: linkY, width: 200, height: linkH)
-        contentView.addSubview(linkCheckbox)
+                    selected: SettingsStore.digitsColorName,
+                    action: #selector(digitsColorClicked(_:)))
 
         // Show date checkbox
         let dateCheckbox = NSButton(checkboxWithTitle: "Show date", target: self, action: #selector(showDateChanged(_:)))
@@ -1279,49 +1284,26 @@ class ChronofaceView: ScreenSaverView {
         }
     }
 
-    @objc private func pillsColorClicked(_ sender: NSButton) {
+    @objc private func accentColorClicked(_ sender: NSButton) {
         let allColors = LumeColorName.allCases
         let idx = sender.tag - 2000
         guard idx >= 0, idx <= allColors.count else { return }
         let newValue: LumeColorName? = (idx == 0) ? nil : allColors[idx - 1]
-        pillsColorName = newValue
-        SettingsStore.pillsColorName = newValue
+        accentColorName = newValue
+        SettingsStore.accentColorName = newValue
         refreshColorRow(in: sender.superview, tagBase: 2000, selected: newValue)
-        if linkHandsPills {
-            handsColorName = newValue
-            SettingsStore.handsColorName = newValue
-            refreshColorRow(in: sender.superview, tagBase: 3000, selected: newValue)
-        }
         setNeedsDisplay(bounds)
     }
 
-    @objc private func handsColorClicked(_ sender: NSButton) {
+    @objc private func digitsColorClicked(_ sender: NSButton) {
         let allColors = LumeColorName.allCases
         let idx = sender.tag - 3000
         guard idx >= 0, idx <= allColors.count else { return }
         let newValue: LumeColorName? = (idx == 0) ? nil : allColors[idx - 1]
-        handsColorName = newValue
-        SettingsStore.handsColorName = newValue
+        digitsColorName = newValue
+        SettingsStore.digitsColorName = newValue
         refreshColorRow(in: sender.superview, tagBase: 3000, selected: newValue)
-        if linkHandsPills {
-            pillsColorName = newValue
-            SettingsStore.pillsColorName = newValue
-            refreshColorRow(in: sender.superview, tagBase: 2000, selected: newValue)
-        }
         setNeedsDisplay(bounds)
-    }
-
-    @objc private func linkHandsPillsChanged(_ sender: NSButton) {
-        let on = sender.state == .on
-        linkHandsPills = on
-        SettingsStore.linkHandsPills = on
-        // При включении link выравниваем оба значения к hands (произвольный выбор главного источника).
-        if on, handsColorName != pillsColorName {
-            pillsColorName = handsColorName
-            SettingsStore.pillsColorName = handsColorName
-            refreshColorRow(in: sender.superview, tagBase: 2000, selected: handsColorName)
-            setNeedsDisplay(bounds)
-        }
     }
 
     @objc private func lumeColorClicked(_ sender: NSButton) {
@@ -1380,6 +1362,30 @@ class ChronofaceView: ScreenSaverView {
             seg.isEnabled = true
             seg.selectedSegment = NightModeOption.allCases.firstIndex(of: nightModeOption) ?? 0
         }
+        refreshCustomBgDependentControls()
+    }
+
+    /// Отключает контролы, не имеющие смысла при включённой картинке:
+    /// темы (фон скрыт картинкой), Lume и Glow (управляют ночным режимом, который форсируется в day).
+    /// Pills / Hands / Link остаются активными.
+    private func refreshCustomBgDependentControls() {
+        guard let panel = cachedConfigureSheet, let content = panel.contentView else { return }
+        let disable = useCustomBackground
+        let dimAlpha: CGFloat = disable ? 0.4 : 1.0
+        for case let button as NSButton in content.subviews {
+            // Theme кружки: tag 0..15
+            if (0..<ThemeName.allCases.count).contains(button.tag) {
+                button.isEnabled = !disable
+                button.alphaValue = dimAlpha
+            }
+            // Lume кружки: tag 1000..1013
+            else if (1000..<2000).contains(button.tag) {
+                button.isEnabled = !disable
+                button.alphaValue = dimAlpha
+            }
+        }
+        glowSliderControl?.isEnabled = !disable
+        glowSliderControl?.alphaValue = dimAlpha
     }
 
     @objc private func chooseBackgroundFile(_ sender: NSButton) {
@@ -1572,7 +1578,8 @@ class ChronofaceView: ScreenSaverView {
             useCustomBg: useCustomBackground,
             dim: backgroundDim,
             bgVersion: useCustomBackground ? customBackgroundVersion : 0,
-            pillsColor: pillsColorName?.rawValue ?? ""
+            accentColor: accentColorName?.rawValue ?? "",
+            digitsColor: digitsColorName?.rawValue ?? ""
         )
         if staticLayer == nil || staticLayerKey != key {
             staticLayer = renderStaticLayer(scale: backingScale, date: now)
@@ -1636,7 +1643,7 @@ class ChronofaceView: ScreenSaverView {
             night: isNightMode,
             glow: glowIntensity,
             scale: scale,
-            handsColor: handsColorName?.rawValue ?? ""
+            accentColor: accentColorName?.rawValue ?? ""
         )
         if handSpritesKey == key, hourSprite != nil, minuteSprite != nil { return }
 
@@ -1717,7 +1724,7 @@ class ChronofaceView: ScreenSaverView {
             ctx.addLine(to: tip)
             ctx.strokePath()
         } else {
-            let handsCol = effectiveHandsColor
+            let handsCol = effectiveAccentColor
             ctx.saveGState()
             ctx.setShadow(
                 offset: CGSize(width: width * 0.3, height: -width * 0.5),
@@ -1914,7 +1921,7 @@ class ChronofaceView: ScreenSaverView {
             let inner = polarToPoint(cx: cx, cy: cy, angle: angle, r: radius * 0.88)
             let outer = polarToPoint(cx: cx, cy: cy, angle: angle, r: radius * 0.92)
 
-            let tickCol = isNightMode ? lumeColor.withAlphaComponent(0.2) : theme.tickColor
+            let tickCol = isNightMode ? lumeColor.withAlphaComponent(0.2) : effectiveTickColor
             ctx.setStrokeColor(tickCol.cgColor)
             ctx.setLineWidth(radius * 0.012)
             ctx.setLineCap(.round)
@@ -1954,7 +1961,7 @@ class ChronofaceView: ScreenSaverView {
                 ctx.strokePath()
                 ctx.restoreGState()
             } else {
-                let pillsCol = effectivePillsColor
+                let pillsCol = effectiveAccentColor
                 ctx.saveGState()
                 ctx.setShadow(
                     offset: CGSize(width: capsuleWidth * 0.2, height: -capsuleWidth * 0.4),
@@ -1985,7 +1992,7 @@ class ChronofaceView: ScreenSaverView {
     private func drawHourNumbers(ctx: CGContext, cx: CGFloat, cy: CGFloat, radius: CGFloat, lumeColor: NSColor) {
         let fontSize = radius * 0.14
         let font = NSFont(name: "Futura-Bold", size: fontSize) ?? NSFont.boldSystemFont(ofSize: fontSize)
-        let numColor = isNightMode ? lumeColor : theme.numberColor
+        let numColor = isNightMode ? lumeColor : effectiveDigitsColor
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
             .foregroundColor: numColor
@@ -2017,7 +2024,7 @@ class ChronofaceView: ScreenSaverView {
     private func drawMinuteNumbers(ctx: CGContext, cx: CGFloat, cy: CGFloat, radius: CGFloat, lumeColor: NSColor) {
         let fontSize = radius * 0.065
         let font = NSFont(name: "Futura-Medium", size: fontSize) ?? NSFont.systemFont(ofSize: fontSize, weight: .medium)
-        let minNumColor = isNightMode ? lumeColor.withAlphaComponent(0.25) : theme.numberColor
+        let minNumColor = isNightMode ? lumeColor.withAlphaComponent(0.25) : effectiveDigitsColor.withAlphaComponent(0.85)
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
             .foregroundColor: minNumColor
@@ -2087,7 +2094,7 @@ class ChronofaceView: ScreenSaverView {
             ctx.strokePath()
         } else {
             // Main hand body
-            let handsCol = effectiveHandsColor
+            let handsCol = effectiveAccentColor
             ctx.saveGState()
             ctx.setShadow(
                 offset: CGSize(width: width * 0.3, height: -width * 0.5),
@@ -2387,7 +2394,7 @@ class ChronofaceView: ScreenSaverView {
             x: cx - dotRadius, y: cy - dotRadius,
             width: dotRadius * 2, height: dotRadius * 2
         )
-        let dotColor = isNightMode ? NSColor(white: 0.15, alpha: 1.0) : effectiveHandsColor
+        let dotColor = isNightMode ? NSColor(white: 0.15, alpha: 1.0) : effectiveAccentColor
         ctx.setFillColor(dotColor.cgColor)
         ctx.fillEllipse(in: dotRect)
     }
