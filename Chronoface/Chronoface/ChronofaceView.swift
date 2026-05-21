@@ -852,6 +852,17 @@ class ChronofaceView: ScreenSaverView {
     /// (пустое окно, повисший sheet, потерянный focus). Кешируем единственный экземпляр.
     private var cachedConfigureSheet: NSWindow?
 
+    /// Когда пользователь переключается на другой скринсейвер и обратно, system settings
+    /// отвязывает наш view от своего окна. Закешированная NSPanel остаётся "числиться"
+    /// привязанной к старому окну как sheet, и попытка открыть её повторно проваливается.
+    /// Сбрасываем кеш при detach, чтобы следующий вызов configureSheet построил свежую панель.
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if self.window == nil {
+            cachedConfigureSheet = nil
+        }
+    }
+
     override var configureSheet: NSWindow? {
         if let cached = cachedConfigureSheet {
             return cached
