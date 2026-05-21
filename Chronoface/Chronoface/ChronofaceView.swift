@@ -879,22 +879,45 @@ class ChronofaceView: ScreenSaverView {
         return true
     }
 
-    /// Текущая активная панель настроек. Не кешируется между открытиями: каждый вызов
-    /// `configureSheet` строит свежий NSPanel. Кеширование вызывало баг "переключился
-    /// на другой скринсейвер - вернулся обратно - окно настроек не открывается"
-    /// (старая панель числится attached в недоступном sheet-режиме).
-    /// Свойство держим, чтобы refreshCustomBgDependentControls / refreshNightSegmentForCustomBg
-    /// могли найти текущую панель и обновить enabled-состояния.
+    /// Слабая ссылка на текущую панель настроек - чтобы refresh* методы могли её обновлять.
     private weak var currentConfigureSheet: NSWindow?
 
+    /// Один общий NSPanel между всеми инстансами view. macOS на уровне ScreenSaverEngine
+    /// привязывает первую возвращённую панель к bundle'у и продолжает работать с тем же
+    /// объектом при последующих open. Если возвращать каждый раз новую NSPanel,
+    /// после переключения скринсейвера и обратно открытие может зависнуть.
+    /// Решение: хранить ОДИН и тот же NSPanel statically, а контент пересобирать каждый раз
+    /// (т.к. кнопки target=self указывают на конкретный инстанс view).
+    private static var sharedConfigureSheet: NSPanel?
+
     override var configureSheet: NSWindow? {
-        let panel = buildConfigureSheet()
+        let panel: NSPanel
+        if let existing = ChronofaceView.sharedConfigureSheet {
+            panel = existing
+        } else {
+            panel = NSPanel(
+                contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
+                styleMask: [.titled, .closable],
+                backing: .buffered,
+                defer: true
+            )
+            panel.title = "Chronoface"
+            panel.isReleasedWhenClosed = false
+            ChronofaceView.sharedConfigureSheet = panel
+        }
+
+        let (content, size) = buildConfigureContent()
+        panel.contentView = content
+        panel.setContentSize(size)
+
         currentConfigureSheet = panel
-        refreshCustomBgDependentControls()
+        refreshNightSegmentForCustomBg()
         return panel
     }
 
-    private func buildConfigureSheet() -> NSWindow? {
+    /// Строит свежий contentView с кнопками, target которых указывает на текущий self.
+    /// Возвращает view + желаемый размер окна.
+    private func buildConfigureContent() -> (NSView, NSSize) {
         let cols = 8
         let circleSize: CGFloat = 36
         let lumeCircleSize: CGFloat = 20
@@ -915,17 +938,6 @@ class ChronofaceView: ScreenSaverView {
         let pillsRowH: CGFloat = 22, handsRowH: CGFloat = 22
         let rowH = circleSize + 1 + labelHeight
         let windowHeight = 10 + okH + gap + bgDimH + gap + bgButtonsH + gap + movH + gap + cityH + gap + cbH + gap + handsRowH + gap + pillsRowH + gap + lumeRowH + gap + glowH + gap + nightH + gap + rowH + gap + rowH + gap + themeH + 10
-
-        let window = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: windowWidth, height: windowHeight),
-            styleMask: [.titled, .closable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Chronoface"
-        // Не кешируем NSPanel: после close() ARC освободит её, как только sheetParent
-        // отпустит ссылку. Это исключает "застрявшие" в attached-состоянии панели.
-        window.isReleasedWhenClosed = false
 
         let contentView = NSView(frame: NSRect(x: 0, y: 0, width: windowWidth, height: windowHeight))
 
@@ -1062,16 +1074,14 @@ class ChronofaceView: ScreenSaverView {
 
         let accentWell = NSColorWell(frame: NSRect(x: 85, y: pillsRowY, width: 56, height: smallCircleSize + 4))
         accentWell.color = SettingsStore.accentColor ?? theme.handColor
+        accentWell.isContinuous = true
+        if #available(macOS 13.0, *) {
+            accentWell.colorWellStyle = .default
+        }
         accentWell.target = self
         accentWell.action = #selector(accentColorWellChanged(_:))
         contentView.addSubview(accentWell)
         self.accentColorWell = accentWell
-
-        let accentReset = NSButton(title: "Theme", target: self, action: #selector(resetAccentColor(_:)))
-        accentReset.bezelStyle = .rounded
-        accentReset.font = NSFont.systemFont(ofSize: 11)
-        accentReset.frame = NSRect(x: 150, y: pillsRowY - 2, width: 70, height: smallCircleSize + 8)
-        contentView.addSubview(accentReset)
 
         // Digits (цифры + минутные засечки + температура) - свободный color picker
         let digitsLabel = NSTextField(labelWithString: "Digits:")
@@ -1081,16 +1091,14 @@ class ChronofaceView: ScreenSaverView {
 
         let digitsWell = NSColorWell(frame: NSRect(x: 85, y: handsRowY, width: 56, height: smallCircleSize + 4))
         digitsWell.color = SettingsStore.digitsColor ?? theme.numberColor
+        digitsWell.isContinuous = true
+        if #available(macOS 13.0, *) {
+            digitsWell.colorWellStyle = .default
+        }
         digitsWell.target = self
         digitsWell.action = #selector(digitsColorWellChanged(_:))
         contentView.addSubview(digitsWell)
         self.digitsColorWell = digitsWell
-
-        let digitsReset = NSButton(title: "Theme", target: self, action: #selector(resetDigitsColor(_:)))
-        digitsReset.bezelStyle = .rounded
-        digitsReset.font = NSFont.systemFont(ofSize: 11)
-        digitsReset.frame = NSRect(x: 150, y: handsRowY - 2, width: 70, height: smallCircleSize + 8)
-        contentView.addSubview(digitsReset)
 
         // Show date checkbox
         let dateCheckbox = NSButton(checkboxWithTitle: "Show date", target: self, action: #selector(showDateChanged(_:)))
@@ -1177,8 +1185,7 @@ class ChronofaceView: ScreenSaverView {
         okButton.frame = NSRect(x: windowWidth - 92, y: okY, width: 72, height: okH)
         contentView.addSubview(okButton)
 
-        window.contentView = contentView
-        return window
+        return (contentView, NSSize(width: windowWidth, height: windowHeight))
     }
 
     @objc private func themeButtonClicked(_ sender: NSButton) {
@@ -1272,14 +1279,7 @@ class ChronofaceView: ScreenSaverView {
         SettingsStore.accentColor = sender.color
         invalidateColorCaches()
         setNeedsDisplay(bounds)
-    }
-
-    @objc private func resetAccentColor(_ sender: NSButton) {
-        accentColor = nil
-        SettingsStore.accentColor = nil
-        accentColorWell?.color = theme.handColor
-        invalidateColorCaches()
-        setNeedsDisplay(bounds)
+        displayIfNeeded()
     }
 
     @objc private func digitsColorWellChanged(_ sender: NSColorWell) {
@@ -1287,14 +1287,7 @@ class ChronofaceView: ScreenSaverView {
         SettingsStore.digitsColor = sender.color
         invalidateColorCaches()
         setNeedsDisplay(bounds)
-    }
-
-    @objc private func resetDigitsColor(_ sender: NSButton) {
-        digitsColor = nil
-        SettingsStore.digitsColor = nil
-        digitsColorWell?.color = theme.numberColor
-        invalidateColorCaches()
-        setNeedsDisplay(bounds)
+        displayIfNeeded()
     }
 
     @objc private func lumeColorClicked(_ sender: NSButton) {
