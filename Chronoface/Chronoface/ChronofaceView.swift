@@ -895,43 +895,49 @@ class ChronofaceView: ScreenSaverView {
         return true
     }
 
-    /// Сильная ссылка на текущую панель настроек. Кнопки внутри держат target weak
-    /// (NSControl.target weak), retain-цикла нет. Сильная ссылка нужна чтобы при detach
-    /// view'а найти "приклеенный" sheet и явно его dismiss'нуть.
-    private var currentConfigureSheet: NSWindow?
+    /// NSWindowController управляет lifecycle панели настроек - Apple-recommended pattern
+    /// для screensaver configure sheet. Контроллер живёт на инстансе view; при destroy
+    /// инстанса автоматически освобождается с панелью внутри.
+    private var configureSheetController: NSWindowController?
+    /// Удобная ссылка на текущую панель (= configureSheetController.window).
+    private weak var currentConfigureSheet: NSWindow?
 
     override var configureSheet: NSWindow? {
-        // Если предыдущая панель всё ещё числится sheet'ом (пользователь переключил
-        // скринсейвер не закрыв настройки), system settings отказывается открыть новый.
-        // Принудительно отвязываем.
-        forceDismissCurrentConfigureSheet()
+        if configureSheetController == nil {
+            let panel = NSPanel(
+                contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
+                styleMask: [.titled, .closable],
+                backing: .buffered,
+                defer: true
+            )
+            panel.title = "Chronoface"
+            panel.isReleasedWhenClosed = false
+            configureSheetController = NSWindowController(window: panel)
+        }
+        guard let panel = configureSheetController?.window else { return nil }
 
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
-            styleMask: [.titled, .closable, .docModalWindow],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Chronoface"
-        window.isReleasedWhenClosed = false
+        // Если предыдущая сессия оставила панель "приклеенной" к sheetParent
+        // (переключение скринсейвера без закрытия настроек), отвязываем явно.
+        if let parent = panel.sheetParent {
+            parent.endSheet(panel)
+        }
+        panel.orderOut(nil)
 
         let (content, size) = buildConfigureContent()
-        window.contentView = content
-        window.setContentSize(size)
+        panel.contentView = content
+        panel.setContentSize(size)
 
-        currentConfigureSheet = window
+        currentConfigureSheet = panel
         refreshNightSegmentForCustomBg()
-        return window
+        return panel
     }
 
     private func forceDismissCurrentConfigureSheet() {
-        if let sheet = currentConfigureSheet {
-            if let parent = sheet.sheetParent {
-                parent.endSheet(sheet)
-            }
-            sheet.orderOut(nil)
-            currentConfigureSheet = nil
+        guard let panel = configureSheetController?.window else { return }
+        if let parent = panel.sheetParent {
+            parent.endSheet(panel)
         }
+        panel.orderOut(nil)
     }
 
     /// Когда наш view отсоединяют от superview (пользователь выбрал другой скринсейвер),
@@ -1536,9 +1542,6 @@ class ChronofaceView: ScreenSaverView {
     @objc private func closeConfigSheet(_ sender: NSButton) {
         guard let window = sender.window else { return }
         window.sheetParent?.endSheet(window)
-        if window === currentConfigureSheet {
-            currentConfigureSheet = nil
-        }
     }
 
     // MARK: - Weather fetching
