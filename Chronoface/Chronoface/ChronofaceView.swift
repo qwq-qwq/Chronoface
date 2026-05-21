@@ -898,37 +898,23 @@ class ChronofaceView: ScreenSaverView {
     /// Слабая ссылка на текущую панель настроек - чтобы refresh* методы могли её обновлять.
     private weak var currentConfigureSheet: NSWindow?
 
-    /// Один общий NSPanel между всеми инстансами view. macOS на уровне ScreenSaverEngine
-    /// привязывает первую возвращённую панель к bundle'у и продолжает работать с тем же
-    /// объектом при последующих open. Если возвращать каждый раз новую NSPanel,
-    /// после переключения скринсейвера и обратно открытие может зависнуть.
-    /// Решение: хранить ОДИН и тот же NSPanel statically, а контент пересобирать каждый раз
-    /// (т.к. кнопки target=self указывают на конкретный инстанс view).
-    private static var sharedConfigureSheet: NSPanel?
-
     override var configureSheet: NSWindow? {
-        let panel: NSPanel
-        if let existing = ChronofaceView.sharedConfigureSheet {
-            panel = existing
-        } else {
-            panel = NSPanel(
-                contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
-                styleMask: [.titled, .closable],
-                backing: .buffered,
-                defer: true
-            )
-            panel.title = "Chronoface"
-            panel.isReleasedWhenClosed = false
-            ChronofaceView.sharedConfigureSheet = panel
-        }
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
+            styleMask: [.titled, .closable, .docModalWindow],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Chronoface"
+        window.isReleasedWhenClosed = false
 
         let (content, size) = buildConfigureContent()
-        panel.contentView = content
-        panel.setContentSize(size)
+        window.contentView = content
+        window.setContentSize(size)
 
-        currentConfigureSheet = panel
+        currentConfigureSheet = window
         refreshNightSegmentForCustomBg()
-        return panel
+        return window
     }
 
     /// Строит свежий contentView с кнопками, target которых указывает на текущий self.
@@ -949,8 +935,6 @@ class ChronofaceView: ScreenSaverView {
         let okH: CGFloat = 28, movH: CGFloat = 24, cityH: CGFloat = 26, cbH: CGFloat = 20, themeH: CGFloat = 20
         let nightH: CGFloat = 28, lumeRowH: CGFloat = lumeCircleSize, glowH: CGFloat = 24
         let bgButtonsH: CGFloat = 24, bgDimH: CGFloat = 22
-        // Accent/Digits теперь color wells: фиксированная высота 22pt.
-        let smallCircleSize: CGFloat = 17
         // Все три color well (Hands / Digits / Background) в одну строку.
         let colorsRowH: CGFloat = 22
         let rowH = circleSize + 1 + labelHeight
@@ -2200,7 +2184,7 @@ class ChronofaceView: ScreenSaverView {
         // Coefficients reflect human eye sensitivity (green > red > blue).
         // Result 0..1; threshold 0.4 separates dark/light themes.
         var bgBrightness: CGFloat = 1.0
-        if let rgb = theme.background.usingColorSpace(.deviceRGB) {
+        if let rgb = effectiveBackgroundColor.usingColorSpace(.deviceRGB) {
             bgBrightness = rgb.redComponent * 0.299 + rgb.greenComponent * 0.587 + rgb.blueComponent * 0.114
         }
         let isDark = bgBrightness < 0.4
@@ -2214,7 +2198,7 @@ class ChronofaceView: ScreenSaverView {
         if isDark {
             // Darker than background — looks recessed, not floating
             var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0
-            if let rgb = theme.background.usingColorSpace(.deviceRGB) {
+            if let rgb = effectiveBackgroundColor.usingColorSpace(.deviceRGB) {
                 r = rgb.redComponent; g = rgb.greenComponent; b = rgb.blueComponent
             }
             windowBg = NSColor(red: r * 0.55, green: g * 0.55, blue: b * 0.55, alpha: 1.0).cgColor
@@ -2378,7 +2362,7 @@ class ChronofaceView: ScreenSaverView {
 
         // Perceived brightness (ITU-R BT.601 luma: Y = R×0.299 + G×0.587 + B×0.114).
         var bgBrightness: CGFloat = 1.0
-        if let rgb = theme.background.usingColorSpace(.deviceRGB) {
+        if let rgb = effectiveBackgroundColor.usingColorSpace(.deviceRGB) {
             bgBrightness = rgb.redComponent * 0.299 + rgb.greenComponent * 0.587 + rgb.blueComponent * 0.114
         }
         let alpha: CGFloat = bgBrightness < 0.4 ? 0.7 : 0.5
