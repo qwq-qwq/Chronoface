@@ -517,8 +517,8 @@ enum SettingsStore {
     }
 
     private static func saveHexColor(_ color: NSColor?, forKey key: String) {
-        if let c = color, let hex = c.chronofaceHex {
-            UserDefaults.standard.set(hex, forKey: key)
+        if let c = color {
+            UserDefaults.standard.set(c.chronofaceHex, forKey: key)
         } else {
             UserDefaults.standard.removeObject(forKey: key)
         }
@@ -528,13 +528,24 @@ enum SettingsStore {
 // MARK: - NSColor hex helpers
 
 fileprivate extension NSColor {
-    /// "#RRGGBB" в deviceRGB. nil если конверсия в RGB не удалась.
-    var chronofaceHex: String? {
-        guard let rgb = self.usingColorSpace(.deviceRGB) else { return nil }
-        let r = Int(round(rgb.redComponent * 255))
-        let g = Int(round(rgb.greenComponent * 255))
-        let b = Int(round(rgb.blueComponent * 255))
-        return String(format: "#%02X%02X%02X", r, g, b)
+    /// "#RRGGBB" в sRGB. Пробуем несколько color space на случай если NSColorPanel
+    /// возвращает HSB/Lab/calibrated - они могут не конвертироваться в первый попавшийся.
+    var chronofaceHex: String {
+        let rgb = self.usingColorSpace(.sRGB)
+            ?? self.usingColorSpace(.deviceRGB)
+            ?? self.usingColorSpace(.genericRGB)
+            ?? self.usingColorSpace(.displayP3)
+        guard let c = rgb else {
+            // Fallback: hash объекта, чтобы кеш как минимум инвалидировался при смене инстанса.
+            return "obj-\(ObjectIdentifier(self).hashValue)"
+        }
+        let r = max(0, min(1, c.redComponent))
+        let g = max(0, min(1, c.greenComponent))
+        let b = max(0, min(1, c.blueComponent))
+        return String(format: "#%02X%02X%02X",
+                      Int(round(r * 255)),
+                      Int(round(g * 255)),
+                      Int(round(b * 255)))
     }
 
     convenience init?(chronofaceHex: String) {
@@ -544,7 +555,7 @@ fileprivate extension NSColor {
         let r = CGFloat((v >> 16) & 0xFF) / 255.0
         let g = CGFloat((v >> 8) & 0xFF) / 255.0
         let b = CGFloat(v & 0xFF) / 255.0
-        self.init(displayP3Red: r, green: g, blue: b, alpha: 1.0)
+        self.init(srgbRed: r, green: g, blue: b, alpha: 1.0)
     }
 }
 
@@ -1176,6 +1187,15 @@ class ChronofaceView: ScreenSaverView {
         let name = allThemes[sender.tag]
         applyTheme(name)
 
+        // Когда тема меняется, color wells, не имеющие пользовательского override,
+        // должны показать новый цвет темы. Если override задан - не трогаем.
+        if accentColor == nil {
+            accentColorWell?.color = theme.handColor
+        }
+        if digitsColor == nil {
+            digitsColorWell?.color = theme.numberColor
+        }
+
         // Update circle borders
         if let contentView = sender.superview {
             for case let button as NSButton in contentView.subviews where button.layer?.cornerRadius == 18 {
@@ -1237,9 +1257,20 @@ class ChronofaceView: ScreenSaverView {
         setNeedsDisplay(bounds)
     }
 
+    /// Принудительный сброс кешей слоёв - чтобы изменение цвета гарантированно
+    /// приводило к перерисовке, даже если hex-строка случайно совпала со старой.
+    private func invalidateColorCaches() {
+        staticLayer = nil
+        staticLayerKey = nil
+        hourSprite = nil
+        minuteSprite = nil
+        handSpritesKey = nil
+    }
+
     @objc private func accentColorWellChanged(_ sender: NSColorWell) {
         accentColor = sender.color
         SettingsStore.accentColor = sender.color
+        invalidateColorCaches()
         setNeedsDisplay(bounds)
     }
 
@@ -1247,12 +1278,14 @@ class ChronofaceView: ScreenSaverView {
         accentColor = nil
         SettingsStore.accentColor = nil
         accentColorWell?.color = theme.handColor
+        invalidateColorCaches()
         setNeedsDisplay(bounds)
     }
 
     @objc private func digitsColorWellChanged(_ sender: NSColorWell) {
         digitsColor = sender.color
         SettingsStore.digitsColor = sender.color
+        invalidateColorCaches()
         setNeedsDisplay(bounds)
     }
 
@@ -1260,6 +1293,7 @@ class ChronofaceView: ScreenSaverView {
         digitsColor = nil
         SettingsStore.digitsColor = nil
         digitsColorWell?.color = theme.numberColor
+        invalidateColorCaches()
         setNeedsDisplay(bounds)
     }
 
