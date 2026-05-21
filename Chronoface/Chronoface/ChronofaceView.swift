@@ -498,6 +498,7 @@ enum SettingsStore {
 
     private static let accentColorHexKey = "ChronofaceAccentColorHex"
     private static let digitsColorHexKey = "ChronofaceDigitsColorHex"
+    private static let backgroundColorHexKey = "ChronofaceBackgroundColorHex"
 
     /// Свободный цвет стрелок + пилюль. nil = брать handColor из темы.
     static var accentColor: NSColor? {
@@ -509,6 +510,12 @@ enum SettingsStore {
     static var digitsColor: NSColor? {
         get { return loadHexColor(forKey: digitsColorHexKey) }
         set { saveHexColor(newValue, forKey: digitsColorHexKey) }
+    }
+
+    /// Свободный цвет фона. nil = брать background из темы. Перекрывается custom bg image.
+    static var backgroundColor: NSColor? {
+        get { return loadHexColor(forKey: backgroundColorHexKey) }
+        set { saveHexColor(newValue, forKey: backgroundColorHexKey) }
     }
 
     private static func loadHexColor(forKey key: String) -> NSColor? {
@@ -707,6 +714,7 @@ class ChronofaceView: ScreenSaverView {
     private(set) var backgroundDim: CGFloat
     private(set) var accentColor: NSColor?
     private(set) var digitsColor: NSColor?
+    private(set) var backgroundColor: NSColor?
     private var customBackgroundImage: NSImage?
     private var customBackgroundVersion: Int = 0
 
@@ -714,6 +722,7 @@ class ChronofaceView: ScreenSaverView {
     private weak var glowSliderControl: NSSlider?
     private weak var accentColorWell: NSColorWell?
     private weak var digitsColorWell: NSColorWell?
+    private weak var backgroundColorWell: NSColorWell?
 
     // Cached static layer: everything that doesn't move frame-to-frame
     // (фон, картинка, тики, цифры, окошко даты, температура).
@@ -759,6 +768,7 @@ class ChronofaceView: ScreenSaverView {
         let bgVersion: Int
         let accentColor: String  // hands + pills
         let digitsColor: String  // numbers + minute ticks
+        let backgroundColor: String  // фон
     }
 
     /// Effective night mode: resolves `.auto` using sunrise/sunset for the selected city.
@@ -809,6 +819,11 @@ class ChronofaceView: ScreenSaverView {
         return digitsColor ?? theme.tickColor
     }
 
+    /// Цвет фона. nil-override = theme.background.
+    private var effectiveBackgroundColor: NSColor {
+        return backgroundColor ?? theme.background
+    }
+
     /// Цвет "lume-полосок" поверх стрелок и пилюль: затемнённая версия accent-цвета.
     /// Даёт эффект тонкой "фосфорной" линии в центре стрелки/метки, в одной палитре с accent.
     private var effectiveLumeStripColor: NSColor {
@@ -836,6 +851,7 @@ class ChronofaceView: ScreenSaverView {
         backgroundDim = SettingsStore.backgroundDim
         accentColor = SettingsStore.accentColor
         digitsColor = SettingsStore.digitsColor
+        backgroundColor = SettingsStore.backgroundColor
         customBackgroundImage = SettingsStore.useCustomBackground ? BackgroundStore.loadCachedImage() : nil
         super.init(frame: frame, isPreview: isPreview)
         animationTimeInterval = ChronofaceView.animationInterval(for: SettingsStore.currentMovement)
@@ -935,9 +951,10 @@ class ChronofaceView: ScreenSaverView {
         let bgButtonsH: CGFloat = 24, bgDimH: CGFloat = 22
         // Accent/Digits теперь color wells: фиксированная высота 22pt.
         let smallCircleSize: CGFloat = 17
-        let pillsRowH: CGFloat = 22, handsRowH: CGFloat = 22
+        // Все три color well (Hands / Digits / Background) в одну строку.
+        let colorsRowH: CGFloat = 22
         let rowH = circleSize + 1 + labelHeight
-        let windowHeight = 10 + okH + gap + bgDimH + gap + bgButtonsH + gap + movH + gap + cityH + gap + cbH + gap + handsRowH + gap + pillsRowH + gap + lumeRowH + gap + glowH + gap + nightH + gap + rowH + gap + rowH + gap + themeH + 10
+        let windowHeight = 10 + okH + gap + bgDimH + gap + bgButtonsH + gap + movH + gap + cityH + gap + cbH + gap + colorsRowH + gap + lumeRowH + gap + glowH + gap + nightH + gap + rowH + gap + rowH + gap + themeH + 10
 
         let contentView = NSView(frame: NSRect(x: 0, y: 0, width: windowWidth, height: windowHeight))
 
@@ -948,9 +965,8 @@ class ChronofaceView: ScreenSaverView {
         let movY = bgButtonsY + bgButtonsH + gap
         let cityY = movY + movH + gap
         let cbY = cityY + cityH + gap
-        let handsRowY = cbY + cbH + gap
-        let pillsRowY = handsRowY + handsRowH + gap
-        let lumeRowY = pillsRowY + pillsRowH + gap
+        let colorsRowY = cbY + cbH + gap
+        let lumeRowY = colorsRowY + colorsRowH + gap
         let glowY = lumeRowY + lumeRowH + gap
         let nightY = glowY + glowH + gap
         let row1LabelY = nightY + nightH + gap
@@ -1066,13 +1082,17 @@ class ChronofaceView: ScreenSaverView {
         contentView.addSubview(glowSlider)
         self.glowSliderControl = glowSlider
 
-        // Accent (hands + pills) - свободный color picker
+        // Три color well в одну строку: Hands (стрелки + пилюли), Digits (цифры + засечки + температура), Bg (фон).
+        let wellSize = NSSize(width: 56, height: colorsRowH)
+        let wellLabelY = colorsRowY + 2
+
+        // Hands
         let accentLabel = NSTextField(labelWithString: "Hands:")
-        accentLabel.font = NSFont.systemFont(ofSize: 13, weight: .medium)
-        accentLabel.frame = NSRect(x: 20, y: pillsRowY + 2, width: 60, height: 20)
+        accentLabel.font = NSFont.systemFont(ofSize: 12, weight: .medium)
+        accentLabel.frame = NSRect(x: 20, y: wellLabelY, width: 50, height: 18)
         contentView.addSubview(accentLabel)
 
-        let accentWell = NSColorWell(frame: NSRect(x: 85, y: pillsRowY, width: 56, height: smallCircleSize + 4))
+        let accentWell = NSColorWell(frame: NSRect(x: 70, y: colorsRowY, width: wellSize.width, height: wellSize.height))
         accentWell.color = SettingsStore.accentColor ?? theme.handColor
         accentWell.isContinuous = true
         if #available(macOS 13.0, *) {
@@ -1083,13 +1103,13 @@ class ChronofaceView: ScreenSaverView {
         contentView.addSubview(accentWell)
         self.accentColorWell = accentWell
 
-        // Digits (цифры + минутные засечки + температура) - свободный color picker
+        // Digits
         let digitsLabel = NSTextField(labelWithString: "Digits:")
-        digitsLabel.font = NSFont.systemFont(ofSize: 13, weight: .medium)
-        digitsLabel.frame = NSRect(x: 20, y: handsRowY + 2, width: 60, height: 20)
+        digitsLabel.font = NSFont.systemFont(ofSize: 12, weight: .medium)
+        digitsLabel.frame = NSRect(x: 145, y: wellLabelY, width: 50, height: 18)
         contentView.addSubview(digitsLabel)
 
-        let digitsWell = NSColorWell(frame: NSRect(x: 85, y: handsRowY, width: 56, height: smallCircleSize + 4))
+        let digitsWell = NSColorWell(frame: NSRect(x: 195, y: colorsRowY, width: wellSize.width, height: wellSize.height))
         digitsWell.color = SettingsStore.digitsColor ?? theme.numberColor
         digitsWell.isContinuous = true
         if #available(macOS 13.0, *) {
@@ -1099,6 +1119,23 @@ class ChronofaceView: ScreenSaverView {
         digitsWell.action = #selector(digitsColorWellChanged(_:))
         contentView.addSubview(digitsWell)
         self.digitsColorWell = digitsWell
+
+        // Background
+        let bgLabel = NSTextField(labelWithString: "Bg:")
+        bgLabel.font = NSFont.systemFont(ofSize: 12, weight: .medium)
+        bgLabel.frame = NSRect(x: 270, y: wellLabelY, width: 30, height: 18)
+        contentView.addSubview(bgLabel)
+
+        let bgWell = NSColorWell(frame: NSRect(x: 300, y: colorsRowY, width: wellSize.width, height: wellSize.height))
+        bgWell.color = SettingsStore.backgroundColor ?? theme.background
+        bgWell.isContinuous = true
+        if #available(macOS 13.0, *) {
+            bgWell.colorWellStyle = .default
+        }
+        bgWell.target = self
+        bgWell.action = #selector(backgroundColorWellChanged(_:))
+        contentView.addSubview(bgWell)
+        self.backgroundColorWell = bgWell
 
         // Show date checkbox
         let dateCheckbox = NSButton(checkboxWithTitle: "Show date", target: self, action: #selector(showDateChanged(_:)))
@@ -1194,14 +1231,19 @@ class ChronofaceView: ScreenSaverView {
         let name = allThemes[sender.tag]
         applyTheme(name)
 
-        // Когда тема меняется, color wells, не имеющие пользовательского override,
-        // должны показать новый цвет темы. Если override задан - не трогаем.
-        if accentColor == nil {
-            accentColorWell?.color = theme.handColor
-        }
-        if digitsColor == nil {
-            digitsColorWell?.color = theme.numberColor
-        }
+        // Клик по теме сбрасывает все три color override и подтягивает в пиккеры новые
+        // цвета темы - даже если пользователь предварительно менял цвета вручную.
+        accentColor = nil
+        digitsColor = nil
+        backgroundColor = nil
+        SettingsStore.accentColor = nil
+        SettingsStore.digitsColor = nil
+        SettingsStore.backgroundColor = nil
+        accentColorWell?.color = theme.handColor
+        digitsColorWell?.color = theme.numberColor
+        backgroundColorWell?.color = theme.background
+        invalidateColorCaches()
+        setNeedsDisplay(bounds)
 
         // Update circle borders
         if let contentView = sender.superview {
@@ -1285,6 +1327,14 @@ class ChronofaceView: ScreenSaverView {
     @objc private func digitsColorWellChanged(_ sender: NSColorWell) {
         digitsColor = sender.color
         SettingsStore.digitsColor = sender.color
+        invalidateColorCaches()
+        setNeedsDisplay(bounds)
+        displayIfNeeded()
+    }
+
+    @objc private func backgroundColorWellChanged(_ sender: NSColorWell) {
+        backgroundColor = sender.color
+        SettingsStore.backgroundColor = sender.color
         invalidateColorCaches()
         setNeedsDisplay(bounds)
         displayIfNeeded()
@@ -1546,7 +1596,8 @@ class ChronofaceView: ScreenSaverView {
             dim: backgroundDim,
             bgVersion: useCustomBackground ? customBackgroundVersion : 0,
             accentColor: accentColor?.chronofaceHex ?? "",
-            digitsColor: digitsColor?.chronofaceHex ?? ""
+            digitsColor: digitsColor?.chronofaceHex ?? "",
+            backgroundColor: backgroundColor?.chronofaceHex ?? ""
         )
         if staticLayer == nil || staticLayerKey != key {
             staticLayer = renderStaticLayer(scale: backingScale, date: now)
@@ -1785,7 +1836,7 @@ class ChronofaceView: ScreenSaverView {
         let radius = min(width, height) * 0.44
         let lumeColor = lumeColorName.color
 
-        let effectiveBg = isNightMode ? NSColor.black : theme.background
+        let effectiveBg = isNightMode ? NSColor.black : effectiveBackgroundColor
         ctx.setFillColor(effectiveBg.cgColor)
         ctx.fill(bounds)
 
