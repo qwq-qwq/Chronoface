@@ -782,6 +782,13 @@ class ChronofaceView: ScreenSaverView {
         return digitsColorName?.color ?? theme.tickColor
     }
 
+    /// Цвет "lume-полосок" поверх стрелок и пилюль: затемнённая версия accent-цвета.
+    /// Даёт эффект тонкой "фосфорной" линии в центре стрелки/метки, в одной палитре с accent.
+    private var effectiveLumeStripColor: NSColor {
+        let base = effectiveAccentColor.usingColorSpace(.deviceRGB) ?? effectiveAccentColor
+        return base.blended(withFraction: 0.35, of: .black) ?? base
+    }
+
     // Weather data
     private var currentTemperature: String?
     private var currentCity: String?
@@ -845,32 +852,17 @@ class ChronofaceView: ScreenSaverView {
         return true
     }
 
-    /// ScreenSaverEngine читает `configureSheet` каждый раз при открытии настроек.
-    /// Если каждый раз создавать новый NSPanel, старые панели накапливают цепочки
-    /// target/action на self и недетерминированно держатся в памяти, что приводит
-    /// к тому, что после нескольких открытий лист настроек начинает странно вести себя
-    /// (пустое окно, повисший sheet, потерянный focus). Кешируем единственный экземпляр.
-    private var cachedConfigureSheet: NSWindow?
-
-    /// Когда пользователь переключается на другой скринсейвер и обратно, system settings
-    /// отвязывает наш view от своего окна. Закешированная NSPanel остаётся "числиться"
-    /// привязанной к старому окну как sheet, и попытка открыть её повторно проваливается.
-    /// Сбрасываем кеш при detach, чтобы следующий вызов configureSheet построил свежую панель.
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        if self.window == nil {
-            cachedConfigureSheet = nil
-        }
-    }
+    /// Текущая активная панель настроек. Не кешируется между открытиями: каждый вызов
+    /// `configureSheet` строит свежий NSPanel. Кеширование вызывало баг "переключился
+    /// на другой скринсейвер - вернулся обратно - окно настроек не открывается"
+    /// (старая панель числится attached в недоступном sheet-режиме).
+    /// Свойство держим, чтобы refreshCustomBgDependentControls / refreshNightSegmentForCustomBg
+    /// могли найти текущую панель и обновить enabled-состояния.
+    private weak var currentConfigureSheet: NSWindow?
 
     override var configureSheet: NSWindow? {
-        if let cached = cachedConfigureSheet {
-            return cached
-        }
         let panel = buildConfigureSheet()
-        cachedConfigureSheet = panel
-        // Расставляем enabled/dim состояние для контролов, зависящих от custom bg.
-        // Должно вызываться после set cachedConfigureSheet, т.к. сам функция читает оттуда.
+        currentConfigureSheet = panel
         refreshCustomBgDependentControls()
         return panel
     }
@@ -905,8 +897,8 @@ class ChronofaceView: ScreenSaverView {
             defer: false
         )
         window.title = "Chronoface"
-        // Под ARC lifetime окна управляется `cachedConfigureSheet`. Иначе close()
-        // мог бы освободить объект, а кешированная ссылка стала бы зомби.
+        // Не кешируем NSPanel: после close() ARC освободит её, как только sheetParent
+        // отпустит ссылку. Это исключает "застрявшие" в attached-состоянии панели.
         window.isReleasedWhenClosed = false
 
         let contentView = NSView(frame: NSRect(x: 0, y: 0, width: windowWidth, height: windowHeight))
@@ -1380,7 +1372,7 @@ class ChronofaceView: ScreenSaverView {
     /// темы (фон скрыт картинкой), Lume и Glow (управляют ночным режимом, который форсируется в day).
     /// Pills / Hands / Link остаются активными.
     private func refreshCustomBgDependentControls() {
-        guard let panel = cachedConfigureSheet, let content = panel.contentView else { return }
+        guard let panel = currentConfigureSheet, let content = panel.contentView else { return }
         let disable = useCustomBackground
         let dimAlpha: CGFloat = disable ? 0.4 : 1.0
         for case let button as NSButton in content.subviews {
@@ -1757,7 +1749,7 @@ class ChronofaceView: ScreenSaverView {
             ctx.addLine(to: neckEnd)
             ctx.strokePath()
 
-            ctx.setStrokeColor(NSColor(red: 0.78, green: 0.90, blue: 0.72, alpha: 0.35).cgColor)
+            ctx.setStrokeColor(effectiveLumeStripColor.withAlphaComponent(0.55).cgColor)
             ctx.setLineWidth(width * 0.4)
             ctx.setLineCap(.round)
             ctx.move(to: bodyStart)
@@ -1988,7 +1980,7 @@ class ChronofaceView: ScreenSaverView {
                 ctx.restoreGState()
 
                 // Lume strip
-                ctx.setStrokeColor(NSColor(red: 0.78, green: 0.90, blue: 0.72, alpha: 0.35).cgColor)
+                ctx.setStrokeColor(effectiveLumeStripColor.withAlphaComponent(0.55).cgColor)
                 ctx.setLineWidth(capsuleWidth * 0.4)
                 ctx.setLineCap(.round)
                 ctx.move(to: inner)
@@ -2129,7 +2121,7 @@ class ChronofaceView: ScreenSaverView {
             ctx.strokePath()
 
             // Lume strip
-            ctx.setStrokeColor(NSColor(red: 0.78, green: 0.90, blue: 0.72, alpha: 0.35).cgColor)
+            ctx.setStrokeColor(effectiveLumeStripColor.withAlphaComponent(0.55).cgColor)
             ctx.setLineWidth(width * 0.4)
             ctx.setLineCap(.round)
             ctx.move(to: bodyStart)
@@ -2378,7 +2370,7 @@ class ChronofaceView: ScreenSaverView {
 
         let tempAttrs: [NSAttributedString.Key: Any] = [
             .font: tempFont,
-            .foregroundColor: theme.numberColor.withAlphaComponent(alpha)
+            .foregroundColor: effectiveDigitsColor.withAlphaComponent(alpha)
         ]
         let tempSize = (text as NSString).size(withAttributes: tempAttrs)
         (text as NSString).draw(at: CGPoint(x: rightEdge - tempSize.width, y: margin), withAttributes: tempAttrs)
@@ -2389,7 +2381,7 @@ class ChronofaceView: ScreenSaverView {
             let cityFont = NSFont(name: "Futura-Medium", size: cityFontSize) ?? NSFont.systemFont(ofSize: cityFontSize, weight: .medium)
             let cityAttrs: [NSAttributedString.Key: Any] = [
                 .font: cityFont,
-                .foregroundColor: theme.numberColor.withAlphaComponent(alpha * 0.7)
+                .foregroundColor: effectiveDigitsColor.withAlphaComponent(alpha * 0.7)
             ]
             let citySize = (city as NSString).size(withAttributes: cityAttrs)
             let cityY = margin + tempSize.height + minSide * 0.004
