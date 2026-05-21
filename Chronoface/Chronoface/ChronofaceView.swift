@@ -895,10 +895,17 @@ class ChronofaceView: ScreenSaverView {
         return true
     }
 
-    /// Слабая ссылка на текущую панель настроек - чтобы refresh* методы могли её обновлять.
-    private weak var currentConfigureSheet: NSWindow?
+    /// Сильная ссылка на текущую панель настроек. Кнопки внутри держат target weak
+    /// (NSControl.target weak), retain-цикла нет. Сильная ссылка нужна чтобы при detach
+    /// view'а найти "приклеенный" sheet и явно его dismiss'нуть.
+    private var currentConfigureSheet: NSWindow?
 
     override var configureSheet: NSWindow? {
+        // Если предыдущая панель всё ещё числится sheet'ом (пользователь переключил
+        // скринсейвер не закрыв настройки), system settings отказывается открыть новый.
+        // Принудительно отвязываем.
+        forceDismissCurrentConfigureSheet()
+
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
             styleMask: [.titled, .closable, .docModalWindow],
@@ -915,6 +922,33 @@ class ChronofaceView: ScreenSaverView {
         currentConfigureSheet = window
         refreshNightSegmentForCustomBg()
         return window
+    }
+
+    private func forceDismissCurrentConfigureSheet() {
+        if let sheet = currentConfigureSheet {
+            if let parent = sheet.sheetParent {
+                parent.endSheet(sheet)
+            }
+            sheet.orderOut(nil)
+            currentConfigureSheet = nil
+        }
+    }
+
+    /// Когда наш view отсоединяют от superview (пользователь выбрал другой скринсейвер),
+    /// принудительно убираем sheet. Без этого macOS считает что наш sheet всё ещё активен
+    /// и не открывает новый при возвращении на наш скринсейвер.
+    override func viewWillMove(toSuperview newSuperview: NSView?) {
+        super.viewWillMove(toSuperview: newSuperview)
+        if newSuperview == nil {
+            forceDismissCurrentConfigureSheet()
+        }
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if self.window == nil {
+            forceDismissCurrentConfigureSheet()
+        }
     }
 
     /// Строит свежий contentView с кнопками, target которых указывает на текущий self.
@@ -1502,6 +1536,9 @@ class ChronofaceView: ScreenSaverView {
     @objc private func closeConfigSheet(_ sender: NSButton) {
         guard let window = sender.window else { return }
         window.sheetParent?.endSheet(window)
+        if window === currentConfigureSheet {
+            currentConfigureSheet = nil
+        }
     }
 
     // MARK: - Weather fetching
