@@ -889,6 +889,7 @@ class ChronofaceView: ScreenSaverView {
 
     override func stopAnimation() {
         super.stopAnimation()
+        forceDismissCurrentConfigureSheet()
     }
 
     override var hasConfigureSheet: Bool {
@@ -1542,7 +1543,11 @@ class ChronofaceView: ScreenSaverView {
 
     @objc private func closeConfigSheet(_ sender: NSButton) {
         guard let window = sender.window else { return }
-        window.sheetParent?.endSheet(window)
+        if let parent = window.sheetParent {
+            parent.endSheet(window)
+        } else {
+            window.orderOut(nil)
+        }
     }
 
     // MARK: - Weather fetching
