@@ -938,6 +938,7 @@ class ChronofaceView: ScreenSaverView {
             parent.endSheet(panel)
         }
         panel.orderOut(nil)
+        configureSheetController = nil
     }
 
     /// Когда наш view отсоединяют от superview (пользователь выбрал другой скринсейвер),
