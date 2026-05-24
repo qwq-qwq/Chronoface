@@ -9,6 +9,12 @@ AGENTS.md
 
 # Xcode
 Chronoface/build/
+Chronoface/build2/
 DerivedData/
 *.xcuserstate
 xcuserdata/
+*.pbxproj.backup
+*.bak
+
+# Installer artifacts
+/dist/

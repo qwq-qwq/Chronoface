@@ -1,0 +1,48 @@
+#!/bin/bash
+# Postinstall: устанавливаются ОБА варианта (новый .app+.appex и legacy .saver).
+# Этот скрипт удаляет несовместимый с текущей macOS чтобы не было двух
+# одинаковых Chronoface в Screen Saver pane.
+#
+#   macOS 14+ (Sonoma+): оставляем App+Extension (новый API).
+#   macOS 13- (Ventura и старше): оставляем legacy .saver.
+
+set +e
+
+APP="/Applications/Chronoface.app"
+EXT="$APP/Contents/PlugIns/ChronofaceExtension.appex"
+SAVER="/Library/Screen Savers/Chronoface.saver"
+
+MAJOR=$(sw_vers -productVersion | cut -d. -f1)
+
+# Закрыть процессы которые могут держать bundles
+pkill -f "Chronoface" 2>/dev/null
+pkill -f "WallpaperAgent" 2>/dev/null
+pkill -f "legacyScreenSaver" 2>/dev/null
+sleep 1
+
+if [ "$MAJOR" -ge 14 ]; then
+    # Новый API (macOS 14+): убираем legacy .saver - на новых macOS он криво
+    # себя ведёт (Options sheet не открывается после переключения скринсейверов).
+    rm -rf "$SAVER"
+
+    # LaunchServices register App (на случай stale кэш)
+    if command -v lsregister >/dev/null 2>&1; then
+        lsregister -f -R "$APP" 2>/dev/null || true
+    fi
+
+    # Зарегистрировать extension
+    if [ -d "$EXT" ]; then
+        pluginkit -a "$EXT" 2>/dev/null || true
+        pluginkit -e use -i app.perek.rest.ChronofaceApp.ChronofaceExtension 2>/dev/null || true
+    fi
+else
+    # macOS 13-: убираем App+Extension - они требуют macOS 14+ API.
+    # Снимаем extension с pluginkit регистрации (на случай если был зарегистрирован).
+    pluginkit -e ignore -i app.perek.rest.ChronofaceApp.ChronofaceExtension 2>/dev/null || true
+    rm -rf "$APP"
+fi
+
+# Перезапустить WallpaperAgent (макос 14+) - он подхватит новый extension
+killall WallpaperAgent 2>/dev/null || true
+
+exit 0

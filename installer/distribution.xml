@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="2">
+    <title>Chronoface</title>
+    <organization>app.perek.rest</organization>
+    <domains enable_localSystem="true"/>
+    <options customize="never" require-scripts="true" rootVolumeOnly="true"/>
+    <welcome    file="welcome.html"    mime-type="text/html"/>
+    <conclusion file="conclusion.html" mime-type="text/html"/>
+    <background file="background.png" alignment="bottomleft" scaling="proportional"/>
+    <background-darkAqua file="background.png" alignment="bottomleft" scaling="proportional"/>
+    <pkg-ref id="app.perek.rest.ChronofaceApp"/>
+    <choices-outline>
+        <line choice="default">
+            <line choice="app.perek.rest.ChronofaceApp"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="app.perek.rest.ChronofaceApp" visible="false">
+        <pkg-ref id="app.perek.rest.ChronofaceApp"/>
+    </choice>
+    <pkg-ref id="app.perek.rest.ChronofaceApp" version="1.0" onConclusion="none">Chronoface.pkg</pkg-ref>
+</installer-gui-script>

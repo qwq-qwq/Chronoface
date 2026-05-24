@@ -1,4 +1,3 @@
-import ScreenSaver
 import AppKit
 import UniformTypeIdentifiers
 
@@ -360,45 +359,104 @@ enum MovementType: String, CaseIterable {
 // MARK: - Settings persistence
 
 enum SettingsStore {
+    static let changedNotification = Notification.Name("com.chronoface.settingsChanged")
+
+    /// Shared plist в /Users/Shared/Chronoface/settings.plist - видим из App и Extension
+    /// БЕЗ App Groups (которые triggerят TCC prompt каждое чтение/запись).
+    /// App не sandboxed - пишет напрямую. Extension через temporary-exception entitlement.
+    /// Подход скопирован у Aerial v4.
+    static let sharedDir = "/Users/Shared/Chronoface"
+    static let settingsFilePath = sharedDir + "/settings.plist"
+
+    private static let queue = DispatchQueue(label: "com.chronoface.settings")
+    private static var cache: [String: Any] = loadFromDisk()
+
+    private static func loadFromDisk() -> [String: Any] {
+        guard let dict = NSDictionary(contentsOfFile: settingsFilePath) as? [String: Any] else {
+            return [:]
+        }
+        return dict
+    }
+
+    private static func writeToDisk() {
+        let fm = FileManager.default
+        if !fm.fileExists(atPath: sharedDir) {
+            try? fm.createDirectory(atPath: sharedDir, withIntermediateDirectories: true)
+        }
+        (cache as NSDictionary).write(toFile: settingsFilePath, atomically: true)
+    }
+
+    /// Перезагружает cache с диска (вызывается из reloadSettings когда пришла
+    /// DistributedNotification что settings изменились в другом процессе).
+    static func reloadFromDisk() {
+        queue.sync { cache = loadFromDisk() }
+    }
+
+    private static func get(_ key: String) -> Any? {
+        queue.sync { cache[key] }
+    }
+
+    private static func set(_ value: Any?, key: String) {
+        queue.sync {
+            if let v = value {
+                cache[key] = v
+            } else {
+                cache.removeValue(forKey: key)
+            }
+            writeToDisk()
+        }
+        postChange()
+    }
+
+    /// Уведомляет другие процессы (App ↔ Extension) что настройка изменилась.
+    static func postChange() {
+        DistributedNotificationCenter.default().postNotificationName(
+            changedNotification,
+            object: nil,
+            userInfo: nil,
+            deliverImmediately: true
+        )
+    }
+
     private static let themeKey = "ChronofaceTheme"
     private static let movementKey = "ChronofaceMovement"
     private static let showDateKey = "ChronofaceShowDate"
 
     static var currentTheme: ThemeName {
         get {
-            if let raw = UserDefaults.standard.string(forKey: themeKey),
+            if let raw = (get(themeKey) as? String),
                let name = ThemeName(rawValue: raw) {
                 return name
             }
             return .turquoise
         }
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: themeKey)
+            set(newValue.rawValue, key: themeKey)
         }
     }
 
     static var currentMovement: MovementType {
         get {
-            if let raw = UserDefaults.standard.string(forKey: movementKey),
+            if let raw = (get(movementKey) as? String),
                let m = MovementType(rawValue: raw) {
                 return m
             }
             return .digital
         }
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: movementKey)
+            set(newValue.rawValue, key: movementKey)
         }
     }
 
     static var showDate: Bool {
         get {
-            if UserDefaults.standard.object(forKey: showDateKey) == nil {
+            if get(showDateKey) == nil {
                 return true
             }
-            return UserDefaults.standard.bool(forKey: showDateKey)
+            return ((get(showDateKey) as? Bool) ?? false)
         }
         set {
-            UserDefaults.standard.set(newValue, forKey: showDateKey)
+            set(newValue, key: showDateKey)
         }
     }
 
@@ -407,22 +465,22 @@ enum SettingsStore {
 
     static var showTemperature: Bool {
         get {
-            if UserDefaults.standard.object(forKey: showTempKey) == nil {
+            if get(showTempKey) == nil {
                 return true
             }
-            return UserDefaults.standard.bool(forKey: showTempKey)
+            return ((get(showTempKey) as? Bool) ?? false)
         }
         set {
-            UserDefaults.standard.set(newValue, forKey: showTempKey)
+            set(newValue, key: showTempKey)
         }
     }
 
     static var selectedCity: String {
         get {
-            return UserDefaults.standard.string(forKey: cityKey) ?? "Kyiv"
+            return (get(cityKey) as? String) ?? "Kyiv"
         }
         set {
-            UserDefaults.standard.set(newValue, forKey: cityKey)
+            set(newValue, key: cityKey)
         }
     }
 
@@ -432,31 +490,31 @@ enum SettingsStore {
 
     static var nightModeOption: NightModeOption {
         get {
-            if let raw = UserDefaults.standard.string(forKey: nightModeOptionKey),
+            if let raw = (get(nightModeOptionKey) as? String),
                let opt = NightModeOption(rawValue: raw) {
                 return opt
             }
             // Migrate from old bool setting
-            if UserDefaults.standard.object(forKey: nightModeKey) != nil {
-                return UserDefaults.standard.bool(forKey: nightModeKey) ? .night : .day
+            if get(nightModeKey) != nil {
+                return ((get(nightModeKey) as? Bool) ?? false) ? .night : .day
             }
             return .day
         }
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: nightModeOptionKey)
+            set(newValue.rawValue, key: nightModeOptionKey)
         }
     }
 
     static var lumeColor: LumeColorName {
         get {
-            if let raw = UserDefaults.standard.string(forKey: lumeColorKey),
+            if let raw = (get(lumeColorKey) as? String),
                let c = LumeColorName(rawValue: raw) {
                 return c
             }
             return .cyan
         }
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: lumeColorKey)
+            set(newValue.rawValue, key: lumeColorKey)
         }
     }
 
@@ -465,13 +523,13 @@ enum SettingsStore {
     /// 0.0 … 1.0, default 0.7
     static var glowIntensity: CGFloat {
         get {
-            if UserDefaults.standard.object(forKey: glowIntensityKey) == nil {
+            if get(glowIntensityKey) == nil {
                 return 0.7
             }
-            return CGFloat(UserDefaults.standard.double(forKey: glowIntensityKey))
+            return CGFloat(((get(glowIntensityKey) as? Double) ?? 0))
         }
         set {
-            UserDefaults.standard.set(Double(newValue), forKey: glowIntensityKey)
+            set(Double(newValue), key: glowIntensityKey)
         }
     }
 
@@ -479,20 +537,20 @@ enum SettingsStore {
     private static let dimAmountKey = "ChronofaceBackgroundDim"
 
     static var useCustomBackground: Bool {
-        get { UserDefaults.standard.bool(forKey: useCustomBgKey) }
-        set { UserDefaults.standard.set(newValue, forKey: useCustomBgKey) }
+        get { ((get(useCustomBgKey) as? Bool) ?? false) }
+        set { set(newValue, key: useCustomBgKey) }
     }
 
     /// 0.0 … 0.8, default 0.4
     static var backgroundDim: CGFloat {
         get {
-            if UserDefaults.standard.object(forKey: dimAmountKey) == nil {
+            if get(dimAmountKey) == nil {
                 return 0.4
             }
-            return CGFloat(UserDefaults.standard.double(forKey: dimAmountKey))
+            return CGFloat(((get(dimAmountKey) as? Double) ?? 0))
         }
         set {
-            UserDefaults.standard.set(Double(newValue), forKey: dimAmountKey)
+            set(Double(newValue), key: dimAmountKey)
         }
     }
 
@@ -519,15 +577,15 @@ enum SettingsStore {
     }
 
     private static func loadHexColor(forKey key: String) -> NSColor? {
-        guard let hex = UserDefaults.standard.string(forKey: key) else { return nil }
+        guard let hex = (get(key) as? String) else { return nil }
         return NSColor(chronofaceHex: hex)
     }
 
     private static func saveHexColor(_ color: NSColor?, forKey key: String) {
         if let c = color {
-            UserDefaults.standard.set(c.chronofaceHex, forKey: key)
+            set(c.chronofaceHex, key: key)
         } else {
-            UserDefaults.standard.removeObject(forKey: key)
+            set(nil, key: key)
         }
     }
 }
@@ -569,13 +627,12 @@ fileprivate extension NSColor {
 // MARK: - Custom background storage
 
 enum BackgroundStore {
-    /// ~/Library/Application Support/Chronoface/
+    /// Shared location: /Users/Shared/Chronoface/ - видим из App и Extension
+    /// без TCC prompt'ов App Groups. App не sandboxed, Extension через
+    /// temporary-exception entitlement. Подход скопирован у Aerial v4.
     static func directory() -> URL? {
+        let dir = URL(fileURLWithPath: SettingsStore.sharedDir, isDirectory: true)
         let fm = FileManager.default
-        guard let base = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
-            return nil
-        }
-        let dir = base.appendingPathComponent("Chronoface", isDirectory: true)
         if !fm.fileExists(atPath: dir.path) {
             try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
         }
@@ -658,10 +715,13 @@ enum BackgroundStore {
 
     static func loadCachedImage() -> NSImage? {
         guard let url = backgroundFileURL(),
-              FileManager.default.fileExists(atPath: url.path) else {
+              FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url) else {
             return nil
         }
-        return NSImage(contentsOf: url)
+        // Через NSImage(data:) - byPasses NSImage's URL cache (NSImage(contentsOf:)
+        // может вернуть закэшированную версию когда файл изменился на диске).
+        return NSImage(data: data)
     }
 }
 
@@ -701,7 +761,12 @@ let cities: [CityInfo] = [
 
 // MARK: - Main screensaver view
 
-class ChronofaceView: ScreenSaverView {
+class ChronofaceRendererView: NSView {
+
+    let isPreview: Bool
+    private var animationTimer: Timer?
+    private var animationTimeInterval: TimeInterval = 1.0 / 24.0
+
 
     private(set) var theme: Theme
     private(set) var movement: MovementType
@@ -839,7 +904,8 @@ class ChronofaceView: ScreenSaverView {
 
     // MARK: - Initialization
 
-    override init?(frame: NSRect, isPreview: Bool) {
+    init(frame: NSRect, isPreview: Bool) {
+        self.isPreview = isPreview
         theme = Theme.named(SettingsStore.currentTheme)
         movement = SettingsStore.currentMovement
         showDate = SettingsStore.showDate
@@ -853,8 +919,57 @@ class ChronofaceView: ScreenSaverView {
         digitsColor = SettingsStore.digitsColor
         backgroundColor = SettingsStore.backgroundColor
         customBackgroundImage = SettingsStore.useCustomBackground ? BackgroundStore.loadCachedImage() : nil
-        super.init(frame: frame, isPreview: isPreview)
-        animationTimeInterval = ChronofaceView.animationInterval(for: SettingsStore.currentMovement)
+        super.init(frame: frame)
+        animationTimeInterval = ChronofaceRendererView.animationInterval(for: SettingsStore.currentMovement)
+
+        // Слушаем cross-process notification: когда App меняет настройку, мы
+        // перечитываем SettingsStore + invalidate caches + перерисовываем preview.
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(settingsChangedExternally),
+            name: SettingsStore.changedNotification,
+            object: nil
+        )
+    }
+
+    deinit {
+        DistributedNotificationCenter.default().removeObserver(self)
+    }
+
+    @objc private func settingsChangedExternally() {
+        DispatchQueue.main.async { [weak self] in
+            self?.reloadSettings()
+        }
+    }
+
+    /// Перечитывает все настройки из SettingsStore и помечает view к перерисовке.
+    /// Вызывается и при cross-process change, и из @objc setters внутри Settings UI.
+    func reloadSettings() {
+        SettingsStore.reloadFromDisk()
+        theme = Theme.named(SettingsStore.currentTheme)
+        movement = SettingsStore.currentMovement
+        showDate = SettingsStore.showDate
+        showTemperature = SettingsStore.showTemperature
+        nightModeOption = SettingsStore.nightModeOption
+        lumeColorName = SettingsStore.lumeColor
+        glowIntensity = SettingsStore.glowIntensity
+        useCustomBackground = SettingsStore.useCustomBackground
+        backgroundDim = SettingsStore.backgroundDim
+        accentColor = SettingsStore.accentColor
+        digitsColor = SettingsStore.digitsColor
+        backgroundColor = SettingsStore.backgroundColor
+        customBackgroundImage = useCustomBackground ? BackgroundStore.loadCachedImage() : nil
+        customBackgroundVersion &+= 1
+        let newInterval = ChronofaceRendererView.animationInterval(for: movement)
+        if newInterval != animationTimeInterval {
+            animationTimeInterval = newInterval
+            if animationTimer != nil {
+                stopAnimation()
+                startAnimation()
+            }
+        }
+        invalidateColorCaches()
+        setNeedsDisplay(bounds)
     }
 
     /// Адаптивная частота: Quartz и Mechanical не нуждаются в 30 FPS, секундная стрелка
@@ -880,50 +995,24 @@ class ChronofaceView: ScreenSaverView {
 
     // MARK: - Lifecycle
 
-    override func startAnimation() {
-        super.startAnimation()
+    func startAnimation() {
+        guard animationTimer == nil else { return }
+        animationTimer = Timer.scheduledTimer(withTimeInterval: animationTimeInterval, repeats: true) { [weak self] _ in
+            self?.animateOneFrame()
+        }
         if showTemperature {
             fetchWeatherIfNeeded()
         }
     }
 
-    override func stopAnimation() {
-        super.stopAnimation()
-    }
-
-    override var hasConfigureSheet: Bool {
-        return true
-    }
-
-    // Паттерн из Aerial / ScreenSaverMinimal: window создаётся ОДИН РАЗ через lazy,
-    // потом configureSheet возвращает ВСЕГДА тот же объект. Только contentView
-    // обновляется (target кнопок указывает на текущий self).
-    // level = .floating - критично: без него после переключения с нового wallpaper-style
-    // screensaver Options кнопка может не открыть sheet (host не показывает наш window).
-    private lazy var configureWindow: NSWindow = {
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
-            styleMask: [.titled, .closable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Chronoface"
-        window.isReleasedWhenClosed = false
-        window.level = .floating
-        return window
-    }()
-
-    override var configureSheet: NSWindow? {
-        let (content, size) = buildConfigureContent()
-        configureWindow.contentView = content
-        configureWindow.setContentSize(size)
-        refreshNightSegmentForCustomBg()
-        return configureWindow
+    func stopAnimation() {
+        animationTimer?.invalidate()
+        animationTimer = nil
     }
 
     /// Строит свежий contentView с кнопками, target которых указывает на текущий self.
     /// Возвращает view + желаемый размер окна.
-    private func buildConfigureContent() -> (NSView, NSSize) {
+    func buildConfigureContent() -> (NSView, NSSize) {
         let cols = 8
         let circleSize: CGFloat = 36
         let lumeCircleSize: CGFloat = 20
@@ -1256,7 +1345,12 @@ class ChronofaceView: ScreenSaverView {
         let m = allMovements[sender.selectedSegment]
         movement = m
         SettingsStore.currentMovement = m
-        animationTimeInterval = ChronofaceView.animationInterval(for: m)
+        animationTimeInterval = ChronofaceRendererView.animationInterval(for: m)
+        // Перезапустим таймер с новой частотой, если он был активен.
+        if animationTimer != nil {
+            stopAnimation()
+            startAnimation()
+        }
     }
 
     @objc private func showTempChanged(_ sender: NSButton) {
@@ -1464,6 +1558,9 @@ class ChronofaceView: ScreenSaverView {
                     self.refreshBackgroundCheckbox(in: container, on: true)
                     self.refreshNightSegmentForCustomBg()
                 }
+                // Уведомляем extension даже если useCustomBackground не менялся -
+                // файл картинки изменился, надо перерисовать preview.
+                SettingsStore.postChange()
                 self.setNeedsDisplay(self.bounds)
             } else {
                 self.showImportFailureAlert(window: parentWindow, message: failureMessage)
@@ -1888,7 +1985,7 @@ class ChronofaceView: ScreenSaverView {
     private var lastDaySig: Int?
     private var lastTempSig: String?
 
-    override func animateOneFrame() {
+    func animateOneFrame() {
         if showTemperature {
             fetchWeatherIfNeeded()
         }
