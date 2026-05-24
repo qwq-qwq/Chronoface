@@ -889,10 +889,16 @@ class ChronofaceRendererView: NSView {
         return backgroundColor ?? theme.background
     }
 
-    /// Цвет "lume-полосок" поверх стрелок и пилюль: затемнённая версия accent-цвета.
-    /// Даёт эффект тонкой "фосфорной" линии в центре стрелки/метки, в одной палитре с accent.
+    /// Цвет "lume-полосок" поверх стрелок и пилюль. Даёт эффект тонкой "фосфорной"
+    /// линии в центре стрелки/метки.
+    /// - Для белых/серых стрелок: натуральный greenish Super-LumiNova C3 оттенок
+    ///   (затемнённый вариант accent для белого = серый, что не похоже на lume).
+    /// - Для цветного accent: затемнённая версия accent в той же палитре.
     private var effectiveLumeStripColor: NSColor {
         let base = effectiveAccentColor.usingColorSpace(.deviceRGB) ?? effectiveAccentColor
+        if base.saturationComponent < 0.15 && base.brightnessComponent > 0.85 {
+            return NSColor(red: 0.78, green: 0.90, blue: 0.72, alpha: 1.0)
+        }
         return base.blended(withFraction: 0.35, of: .black) ?? base
     }
 
