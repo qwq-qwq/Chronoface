@@ -59,6 +59,43 @@ body.active #settings-btn {
     fill: #fff;
 }
 
+/* Home / back button */
+
+#home-btn {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.3s, background 0.3s, border-color 0.3s;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    text-decoration: none;
+}
+
+body.active #home-btn {
+    opacity: 0.7;
+}
+
+#home-btn:hover {
+    opacity: 1 !important;
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+#home-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
 /* Settings hint tooltip */
 
 #settings-hint {

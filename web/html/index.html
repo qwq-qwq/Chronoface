@@ -920,9 +920,9 @@
             <p class="feature-desc">Luminescent night mode with 14 glow colours and adjustable intensity. Designed to feel like Super-LumiNova in the dark.</p>
         </div>
         <div class="feature-card reveal">
-            <div class="feature-number">20</div>
+            <div class="feature-number">22</div>
             <h3 class="feature-name">World Cities</h3>
-            <p class="feature-desc">Live timezone and weather for 20 cities. Auto sunrise/sunset detection switches between day and night modes seamlessly.</p>
+            <p class="feature-desc">Live timezone and weather for 22 cities. Auto sunrise/sunset detection switches between day and night modes seamlessly.</p>
         </div>
         <div class="feature-card reveal">
             <div class="feature-number">3</div>
@@ -968,7 +968,7 @@
         <div class="cities-text reveal">
             <p class="section-eyebrow">World Time</p>
             <h2 class="section-title">Global,<br>at a glance.</h2>
-            <p class="section-desc">Live temperature and correct timezone for 20 cities. The auto mode calculates sunrise and sunset with NOAA solar algorithms to toggle night mode perfectly.</p>
+            <p class="section-desc">Live temperature and correct timezone for 22 cities. The auto mode calculates sunrise and sunset with NOAA solar algorithms to toggle night mode perfectly.</p>
             <div class="city-list" id="city-list"></div>
         </div>
         <div class="weather-display reveal">
@@ -1094,7 +1094,7 @@
 
     const THEME_ORDER = ['white','turquoise','glacier','ocean','tennis','signalBlue','salmon','yellow','beige','pistachio','lavender','rose','skyBlue','cream','slate','noir'];
 
-    const CITIES = ['Kyiv','Lviv','London','New York','Los Angeles','Paris','Berlin','Tokyo','Dubai','Istanbul','Bangkok','Singapore','Sydney','Toronto','Barcelona','Rome','Beijing','Seoul','Tel Aviv','Buenos Aires'];
+    const CITIES = ['Kyiv','Lviv','London','New York','Los Angeles','Paris','Berlin','Tokyo','Dubai','Istanbul','Bangkok','Singapore','Sydney','Toronto','Barcelona','Rome','Beijing','Seoul','Tel Aviv','Buenos Aires','Baku','Brussels'];
 
     const FONT = '"Futura", "Jost", "Century Gothic", sans-serif';
 
@@ -1605,7 +1605,9 @@
         'Beijing':      { lat: 39.9042, lon: 116.4074 },
         'Seoul':        { lat: 37.5665, lon: 126.9780 },
         'Tel Aviv':     { lat: 32.0853, lon: 34.7818 },
-        'Buenos Aires': { lat: -34.6037, lon: -58.3816 }
+        'Buenos Aires': { lat: -34.6037, lon: -58.3816 },
+        'Baku':         { lat: 40.4093, lon: 49.8671 },
+        'Brussels':     { lat: 50.8503, lon: 4.3517 }
     };
 
     const weatherTempEl = document.getElementById('weather-temp');
