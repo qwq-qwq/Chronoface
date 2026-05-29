@@ -4,12 +4,6 @@ import AppKit
 // Render Chronoface clock to a thumbnail PNG for System Settings preview
 // Standalone script — duplicates drawing logic from ChronofaceView
 
-let width: CGFloat = 640
-let height: CGFloat = 480
-let cx = width / 2.0
-let cy = height / 2.0
-let radius = min(width, height) * 0.44
-
 // Turquoise theme colors (default)
 let background = NSColor(displayP3Red: 0.69, green: 0.89, blue: 0.89, alpha: 1.0)
 let tickColor = NSColor(red: 0.08, green: 0.24, blue: 0.28, alpha: 1.0)
@@ -20,6 +14,11 @@ let handColor = NSColor(white: 0.91, alpha: 1.0)
 let handHighlight = NSColor(white: 1.0, alpha: 0.6)
 let handShadow = NSColor(white: 0.0, alpha: 0.15)
 let secondHandColor = NSColor(white: 0.91, alpha: 1.0)
+
+func renderThumbnail(width: CGFloat, height: CGFloat, outputPath: String) {
+let cx = width / 2.0
+let cy = height / 2.0
+let radius = min(width, height) * 0.44
 
 func polarToPoint(angle: CGFloat, r: CGFloat) -> CGPoint {
     let a = angle - .pi / 2.0
@@ -232,7 +231,6 @@ ctx.fillEllipse(in: CGRect(x: cx - innerR, y: cy - innerR, width: innerR * 2, he
 image.unlockFocus()
 
 // Save as PNG
-let outputPath = "\(FileManager.default.currentDirectoryPath)/Chronoface/Chronoface/thumbnail.png"
 guard let tiff = image.tiffRepresentation,
       let bitmap = NSBitmapImageRep(data: tiff),
       let png = bitmap.representation(using: .png, properties: [:]) else {
@@ -240,5 +238,18 @@ guard let tiff = image.tiffRepresentation,
     exit(1)
 }
 
-try! png.write(to: URL(fileURLWithPath: outputPath))
-print("Thumbnail saved: \(outputPath)")
+// NSImage с lockFocus возвращает TIFF в пиксельном размере, равном sizeInPoints,
+// поэтому bitmap имеет нужный pixel-size без явного указания.
+let url = URL(fileURLWithPath: outputPath)
+try! FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
+                                          withIntermediateDirectories: true)
+try! png.write(to: url)
+print("Thumbnail saved: \(outputPath) (\(Int(width))x\(Int(height)))")
+}
+
+let cwd = FileManager.default.currentDirectoryPath
+
+// Legacy .saver thumbnail (4:3) для macOS 13 fallback.
+// Extension assets (thumbnail.imageset) hand-designed - не перетираем.
+renderThumbnail(width: 640, height: 480,
+                outputPath: "\(cwd)/Chronoface/Chronoface/thumbnail.png")
