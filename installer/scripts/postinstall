@@ -45,4 +45,16 @@ fi
 # Перезапустить WallpaperAgent (макос 14+) - он подхватит новый extension
 killall WallpaperAgent 2>/dev/null || true
 
+# Onboarding: открыть приложение настроек сразу после установки (только macOS 14+,
+# где app остаётся). У extension-формата нет кнопки Options в System Settings, поэтому
+# показываем окно настроек явно - так же, как Aerial 4 при первом запуске.
+# postinstall выполняется от root, поэтому запускаем open в GUI-сессии console-юзера.
+if [ -d "$APP" ]; then
+    CONSOLE_USER=$(stat -f "%Su" /dev/console 2>/dev/null)
+    if [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ]; then
+        CONSOLE_UID=$(id -u "$CONSOLE_USER" 2>/dev/null)
+        launchctl asuser "$CONSOLE_UID" open "$APP" 2>/dev/null || true
+    fi
+fi
+
 exit 0

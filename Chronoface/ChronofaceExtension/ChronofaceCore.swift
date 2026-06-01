@@ -1744,6 +1744,68 @@ class ChronofaceRendererView: NSView {
         drawSecondHand(ctx: ctx, cx: cx, cy: cy, angle: secondAngle, radius: radius)
         drawSecondHandRing(ctx: ctx, cx: cx, cy: cy, radius: radius)
         drawAxisPin(ctx: ctx, cx: cx, cy: cy, radius: radius)
+
+        // Extension-формат (Sonoma+) не показывает кнопку Options в System Settings:
+        // ScreenSaverViewController - это XPC remote-view (NSServiceViewController)
+        // без configureSheet. Поэтому в маленьком превью System Settings рисуем
+        // подсказку-"кнопку", ведущую к настройкам в приложении Chronoface.
+        //
+        // isPreview здесь ненадёжен: ChronofaceViewController.loadView выводит его
+        // из размера главного экрана, а не из размера, который даёт хост, поэтому он
+        // почти всегда false. Детектим превью по размеру: реальный полноэкранный
+        // скринсейвер близок к размеру экрана, превью в System Settings заметно меньше.
+        let screenWidth = NSScreen.main?.frame.width ?? 1920
+        if width < screenWidth * 0.7 && min(width, height) >= 120 {
+            drawPreviewSettingsHint(ctx: ctx, width: width, height: height)
+        }
+    }
+
+    /// Подсказка-"кнопка" в режиме превью (System Settings): указывает, что настройки
+    /// открываются через приложение Chronoface. У extension-формата нет нативной кнопки
+    /// Options, а превью в System Settings не пробрасывает клики (вдобавок extension
+    /// в песочнице) - поэтому это визуальный указатель, а не интерактивная кнопка.
+    private func drawPreviewSettingsHint(ctx: CGContext, width: CGFloat, height: CGFloat) {
+        let minSide = min(width, height)
+        let text = "Open Chronoface app for Options" as NSString
+
+        let fontSize = max(9.0, minSide * 0.04)
+        let font = NSFont.systemFont(ofSize: fontSize, weight: .semibold)
+
+        // Контраст к фону (ITU-R BT.601 luma), как в drawTemperature.
+        var bgBrightness: CGFloat = 1.0
+        if let rgb = effectiveBackgroundColor.usingColorSpace(.deviceRGB) {
+            bgBrightness = rgb.redComponent * 0.299 + rgb.greenComponent * 0.587 + rgb.blueComponent * 0.114
+        }
+        let onDark = isNightMode || bgBrightness < 0.45
+        let inkColor = onDark ? NSColor.white : NSColor.black
+
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: inkColor.withAlphaComponent(0.9)
+        ]
+        let textSize = text.size(withAttributes: attrs)
+
+        let padX = fontSize * 0.95
+        let padY = fontSize * 0.5
+        let pillW = textSize.width + padX * 2
+        let pillH = textSize.height + padY * 2
+        let pillX = (width - pillW) / 2
+        let pillY = minSide * 0.07
+
+        let pillRect = CGRect(x: pillX, y: pillY, width: pillW, height: pillH)
+        let pill = CGPath(roundedRect: pillRect, cornerWidth: pillH / 2, cornerHeight: pillH / 2, transform: nil)
+
+        ctx.saveGState()
+        ctx.addPath(pill)
+        ctx.setFillColor(inkColor.withAlphaComponent(0.14).cgColor)
+        ctx.fillPath()
+        ctx.addPath(pill)
+        ctx.setStrokeColor(inkColor.withAlphaComponent(0.28).cgColor)
+        ctx.setLineWidth(max(1.0, fontSize * 0.06))
+        ctx.strokePath()
+        ctx.restoreGState()
+
+        text.draw(at: CGPoint(x: pillX + padX, y: pillY + padY), withAttributes: attrs)
     }
 
     private func ensureHandSprites(scale: CGFloat) {

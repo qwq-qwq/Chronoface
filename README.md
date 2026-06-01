@@ -28,12 +28,27 @@ A minimalist analog **watch face screen saver for macOS**: 16 dial themes, lumin
 
 ## Installation (screen saver)
 
-### From a release build
+### From a release build (recommended)
 
-1. Download the latest `Chronoface.saver.zip` from [Releases](../../releases).
-2. Unzip and double-click `Chronoface.saver`.
-3. macOS opens **System Settings → Screen Saver** — pick Chronoface.
-4. Click **Screen Saver Options…** to choose theme, movement, night mode and city.
+1. Download the latest `Chronoface.pkg` from [Releases](../../releases) and run it.
+2. On **macOS 14 Sonoma and later** the installer puts **Chronoface.app** in
+   `/Applications` (with the screen saver extension) and opens it automatically so
+   you can set theme, movement, night mode and city right away.
+3. Enable it in **System Settings → Screen Saver → Chronoface**.
+4. To change settings later, open **Chronoface.app** again (there is no
+   "Options…" button in System Settings: the modern screen saver extension format
+   has no API for one, so configuration lives in the app, the same approach
+   Aerial 4 uses).
+
+On **macOS 13 Ventura** the same installer drops a legacy `Chronoface.saver` into
+`/Library/Screen Savers/` instead, and there you do get a **Screen Saver Options…**
+button in System Settings.
+
+### Legacy `.saver` only
+
+Prefer no app? Download `Chronoface.saver.zip` from Releases, unzip and
+double-click `Chronoface.saver`. This installs only the legacy bundle (best on
+macOS 13; on Sonoma the app + extension build behaves better).
 
 ### Build from source
 
