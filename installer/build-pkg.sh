@@ -16,8 +16,8 @@ set -e
 VERSION="${1:-1.0}"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 INSTALLER_DIR="$ROOT_DIR/installer"
-APP_PATH="${APP_PATH:-$ROOT_DIR/Chronoface/build2/Build/Products/Debug/Chronoface.app}"
-SAVER_PATH="${SAVER_PATH:-$ROOT_DIR/Chronoface/build/Build/Products/Debug/Chronoface.saver}"
+APP_PATH="${APP_PATH:-$ROOT_DIR/Chronoface/build2/Build/Products/Release/Chronoface.app}"
+SAVER_PATH="${SAVER_PATH:-$ROOT_DIR/Chronoface/build/Build/Products/Release/Chronoface.saver}"
 DIST_DIR="$ROOT_DIR/dist"
 PAYLOAD_DIR="$DIST_DIR/payload-$$"
 SCRATCH_PKG="$DIST_DIR/Chronoface.pkg"
@@ -25,13 +25,34 @@ FINAL_PKG="$DIST_DIR/Chronoface-$VERSION.pkg"
 
 if [ ! -d "$APP_PATH" ]; then
   echo "ERROR: $APP_PATH не найден."
-  echo "Сначала собери: cd Chronoface && xcodebuild -project Chronoface.xcodeproj -scheme ChronofaceApp -configuration Debug -derivedDataPath ./build build"
+  echo "Сначала собери: cd Chronoface && xcodebuild -project Chronoface.xcodeproj -scheme ChronofaceApp -configuration Release -destination 'generic/platform=macOS' -derivedDataPath ./build2 build"
   exit 1
 fi
 
 if [ ! -d "$SAVER_PATH" ]; then
   echo "WARNING: $SAVER_PATH не найден - legacy .saver не будет включён в PKG."
-  echo "Чтобы собрать: cd Chronoface && xcodebuild -project Chronoface.xcodeproj -scheme Chronoface -configuration Debug -derivedDataPath ./build build"
+  echo "Чтобы собрать: cd Chronoface && xcodebuild -project Chronoface.xcodeproj -target Chronoface -configuration Release -derivedDataPath ./build build"
+fi
+
+# В дистрибутив должны попадать только universal-бинарники: сборка на Apple
+# Silicon без generic destination даёт arm64-only, на Intel такой pkg не работает.
+check_universal() {
+  local bundle="$1"
+  local bin
+  while IFS= read -r -d '' bin; do
+    for arch in x86_64 arm64; do
+      if ! lipo "$bin" -verify_arch "$arch" 2>/dev/null; then
+        echo "ERROR: $bin не содержит $arch (не universal)."
+        echo "Пересобери с -destination 'generic/platform=macOS' (или ARCHS=\"arm64 x86_64\")."
+        exit 1
+      fi
+    done
+  done < <(find "$bundle" -type f -path '*/MacOS/*' -print0)
+}
+
+check_universal "$APP_PATH"
+if [ -d "$SAVER_PATH" ]; then
+  check_universal "$SAVER_PATH"
 fi
 
 mkdir -p "$DIST_DIR"

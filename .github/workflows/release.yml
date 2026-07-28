@@ -88,6 +88,7 @@ jobs:
             -project Chronoface/Chronoface.xcodeproj \
             -scheme ChronofaceApp \
             -configuration Release \
+            -destination 'generic/platform=macOS' \
             -derivedDataPath Chronoface/build \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="$DEV_ID" \
@@ -107,6 +108,7 @@ jobs:
             -project Chronoface/Chronoface.xcodeproj \
             -scheme ChronofaceApp \
             -configuration Release \
+            -destination 'generic/platform=macOS' \
             -derivedDataPath Chronoface/build \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \

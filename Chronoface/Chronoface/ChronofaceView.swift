@@ -863,12 +863,12 @@ class ChronofaceView: ScreenSaverView {
         animationTimeInterval = ChronofaceView.animationInterval(for: SettingsStore.currentMovement)
     }
 
-    /// Адаптивная частота: Quartz и Mechanical не нуждаются в 30 FPS, секундная стрелка
-    /// у них дискретная. Digital оставляем плавным, но 24 FPS визуально неотличим от 30.
+    /// Адаптивная частота: у дискретных ходов частота кадров обязана быть кратна
+    /// частоте шага стрелки, иначе алиасинг даёт неравномерный ритм битов.
     private static func animationInterval(for movement: MovementType) -> TimeInterval {
         switch movement {
         case .quartz: return 1.0 / 2.0      // двойная частота от тика, чтобы не было фазового сдвига
-        case .mechanical: return 1.0 / 10.0 // 8 beats/sec, 10 FPS ловит каждый бит
+        case .mechanical: return 1.0 / 24.0 // 8 beats/sec: 10 FPS давал биты по 100/200 мс (рывки), 24 = 3 кадра на бит
         case .digital: return 1.0 / 24.0    // плавный sweep, 24 FPS неотличим от 30
         }
     }
