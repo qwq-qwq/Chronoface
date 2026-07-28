@@ -761,6 +761,12 @@ let cities: [CityInfo] = [
 
 // MARK: - Main screensaver view
 
+/// Borderless-окно предпросмотра: по умолчанию такое окно не может стать key
+/// и не получало бы keyDown для закрытия по клавише.
+private final class ChronofacePreviewWindow: NSWindow {
+    override var canBecomeKey: Bool { true }
+}
+
 class ChronofaceRendererView: NSView {
 
     let isPreview: Bool
@@ -788,6 +794,12 @@ class ChronofaceRendererView: NSView {
     private weak var accentColorWell: NSColorWell?
     private weak var digitsColorWell: NSColorWell?
     private weak var backgroundColorWell: NSColorWell?
+
+    // Полноэкранный предпросмотр из окна настроек (только app-таргет,
+    // в extension-копии этого кода нет).
+    private var previewWindow: NSWindow?
+    private var previewRenderer: ChronofaceRendererView?
+    private var previewEventMonitor: Any?
 
     // Cached static layer: everything that doesn't move frame-to-frame
     // (фон, картинка, тики, цифры, окошко даты, температура).
@@ -983,7 +995,7 @@ class ChronofaceRendererView: NSView {
     private static func animationInterval(for movement: MovementType) -> TimeInterval {
         switch movement {
         case .quartz: return 1.0 / 2.0      // двойная частота от тика, чтобы не было фазового сдвига
-        case .mechanical: return 1.0 / 10.0 // 8 beats/sec, 10 FPS ловит каждый бит
+        case .mechanical: return 1.0 / 24.0 // 8 beats/sec: 10 FPS давал биты по 100/200 мс (рывки), 24 = 3 кадра на бит
         case .digital: return 1.0 / 24.0    // плавный sweep, 24 FPS неотличим от 30
         }
     }
@@ -1297,6 +1309,12 @@ class ChronofaceRendererView: NSView {
                                   target: self, action: #selector(dimAmountChanged(_:)))
         dimSlider.frame = NSRect(x: 75, y: bgDimY, width: windowWidth - 95, height: bgDimH)
         contentView.addSubview(dimSlider)
+
+        // Preview button - полноэкранный предпросмотр, закрывается любой клавишей или кликом
+        let previewButton = NSButton(title: "Preview", target: self, action: #selector(previewClicked(_:)))
+        previewButton.bezelStyle = .rounded
+        previewButton.frame = NSRect(x: 20, y: okY, width: 90, height: okH)
+        contentView.addSubview(previewButton)
 
         // OK button
         let okButton = NSButton(title: "OK", target: self, action: #selector(closeConfigSheet(_:)))
@@ -1612,6 +1630,57 @@ class ChronofaceRendererView: NSView {
             parent.endSheet(window)
         }
         window.orderOut(nil)
+    }
+
+    // MARK: - Fullscreen preview
+
+    @objc private func previewClicked(_ sender: NSButton) {
+        guard previewWindow == nil else { return }
+        guard let screen = sender.window?.screen ?? NSScreen.main else { return }
+
+        let renderer = ChronofaceRendererView(
+            frame: NSRect(origin: .zero, size: screen.frame.size),
+            isPreview: false
+        )
+        let window = ChronofacePreviewWindow(
+            contentRect: screen.frame,
+            styleMask: .borderless,
+            backing: .buffered,
+            defer: false
+        )
+        window.level = .screenSaver
+        window.isOpaque = true
+        window.backgroundColor = .black
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        window.isReleasedWhenClosed = false
+        window.contentView = renderer
+        window.makeKeyAndOrderFront(nil)
+        renderer.startAnimation()
+        NSCursor.hide()
+
+        // Как у настоящего скринсейвера: любой клик или клавиша закрывает предпросмотр.
+        previewEventMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.keyDown, .leftMouseDown, .rightMouseDown, .otherMouseDown]
+        ) { [weak self] _ in
+            self?.closePreview()
+            return nil
+        }
+
+        previewWindow = window
+        previewRenderer = renderer
+    }
+
+    private func closePreview() {
+        guard let window = previewWindow else { return }
+        if let monitor = previewEventMonitor {
+            NSEvent.removeMonitor(monitor)
+            previewEventMonitor = nil
+        }
+        previewRenderer?.stopAnimation()
+        previewRenderer = nil
+        NSCursor.unhide()
+        window.orderOut(nil)
+        previewWindow = nil
     }
 
     // MARK: - Weather fetching

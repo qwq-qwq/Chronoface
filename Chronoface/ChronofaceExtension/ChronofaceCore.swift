@@ -983,7 +983,7 @@ class ChronofaceRendererView: NSView {
     private static func animationInterval(for movement: MovementType) -> TimeInterval {
         switch movement {
         case .quartz: return 1.0 / 2.0      // двойная частота от тика, чтобы не было фазового сдвига
-        case .mechanical: return 1.0 / 10.0 // 8 beats/sec, 10 FPS ловит каждый бит
+        case .mechanical: return 1.0 / 24.0 // 8 beats/sec: 10 FPS давал биты по 100/200 мс (рывки), 24 = 3 кадра на бит
         case .digital: return 1.0 / 24.0    // плавный sweep, 24 FPS неотличим от 30
         }
     }
