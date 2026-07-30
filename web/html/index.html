@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chronoface - Analog Watch Face Screensaver for macOS</title>
-    <meta name="description" content="Free macOS screensaver that turns your Mac into a Swiss-inspired analog watch face. 16 dial themes, luminescent night mode, live weather. Open source.">
-    <meta name="keywords" content="macOS screensaver, watch face screensaver, analog clock screensaver, mac screen saver, swiss watch screensaver, luminescent screensaver">
-    <meta property="og:title" content="Chronoface - Analog Watch Face Screensaver for macOS">
+    <title>Chronoface - Minimalist Analog Clock Screensaver for macOS</title>
+    <meta name="description" content="Free, open-source minimalist analog clock screensaver for macOS. A Swiss-inspired watch face with 16 dial themes, luminescent night mode and live weather. macOS 13+, Intel and Apple Silicon.">
+    <meta name="keywords" content="macOS screensaver, analog clock screensaver, minimalist clock screensaver, watch face screensaver, mac screen saver, free clock screensaver, swiss watch screensaver, luminescent screensaver">
+    <meta property="og:title" content="Chronoface - Minimalist Analog Clock Screensaver for macOS">
     <meta property="og:description" content="Free macOS screensaver that turns your Mac into a Swiss-inspired analog watch face. 16 dial themes, luminescent night mode.">
     <meta property="og:url" content="https://chronoface.perek.rest">
     <meta property="og:type" content="website">
@@ -15,9 +15,31 @@
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="Chronoface analog watch face screensaver in night mode with amber luminescent dial">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Chronoface - Analog Watch Face Screensaver for macOS">
+    <meta name="twitter:title" content="Chronoface - Minimalist Analog Clock Screensaver for macOS">
     <meta name="twitter:description" content="Free macOS screensaver that turns your Mac into a Swiss-inspired analog watch face.">
     <meta name="twitter:image" content="https://chronoface.perek.rest/og-image.jpg">
+    <link rel="canonical" href="https://chronoface.perek.rest/">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Chronoface",
+      "operatingSystem": "macOS 13.0 or later",
+      "applicationCategory": "DesktopEnhancementApplication",
+      "applicationSubCategory": "Screensaver",
+      "description": "Free, open-source minimalist analog clock screensaver for macOS. A Swiss-inspired watch face with 16 dial themes, luminescent night mode and live weather.",
+      "url": "https://chronoface.perek.rest/",
+      "image": "https://chronoface.perek.rest/og-image.jpg",
+      "screenshot": "https://chronoface.perek.rest/themes-grid.jpg",
+      "downloadUrl": "https://github.com/qwq-qwq/Chronoface/releases/latest/download/Chronoface.pkg",
+      "installUrl": "https://github.com/qwq-qwq/Chronoface/releases/latest",
+      "softwareVersion": "1.1.6",
+      "license": "https://github.com/qwq-qwq/Chronoface/blob/main/LICENSE",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "author": { "@type": "Person", "name": "Serhii Perekrestov", "url": "https://github.com/qwq-qwq" }
+    }
+    </script>
     <meta name="theme-color" content="#08080a">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -657,6 +679,53 @@
             display: block;
         }
 
+        /* ─── FAQ Section ────────────────────────────── */
+
+        .faq-section {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 120px 48px 40px;
+        }
+
+        .faq-list {
+            margin-top: 48px;
+        }
+
+        .faq-item {
+            border-top: 1px solid var(--surface-raised);
+            padding: 28px 0;
+        }
+
+        .faq-item h3 {
+            font-family: var(--sans);
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        .faq-item p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.7;
+            font-weight: 300;
+            max-width: 62ch;
+        }
+
+        .faq-item a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .faq-item a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 640px) {
+            .faq-section {
+                padding: 80px 24px 24px;
+            }
+        }
+
         /* ─── CTA Section ────────────────────────────── */
 
         .cta-section {
@@ -1008,6 +1077,53 @@
     </section>
 
     <!-- CTA Section -->
+    <section class="faq-section" id="faq">
+        <div class="reveal">
+            <p class="section-eyebrow">Questions</p>
+            <h2 class="section-title">Good to know.</h2>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <h3>Is Chronoface free?</h3>
+                    <p>Yes. Chronoface is a free, open-source (MIT) minimalist clock screensaver for macOS. No subscriptions, no ads, no accounts. The full source code is on GitHub.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Which Macs does it support?</h3>
+                    <p>Any Mac running macOS 13 Ventura or newer. The installer is universal and runs natively on both Apple Silicon and Intel Macs.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>How is it different from Fliqlo, Padbury Clock or Bauhaus Clock?</h3>
+                    <p>Fliqlo and Padbury Clock are digital-style clocks. Chronoface is a true analog watch face with 16 curated dial themes, three movement styles and a luminescent night mode. And unlike paid clock screensavers such as Bauhaus Clock, it is completely free and open source.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Does it need an internet connection?</h3>
+                    <p>No. The clock, night mode and sunrise/sunset calculations (NOAA solar algorithms) work fully offline. Only the optional live weather complication fetches data.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Can I try it before installing?</h3>
+                    <p>Yes. The <a href="chronoface.html">live web demo</a> runs the exact same dial geometry in your browser tab.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "Is Chronoface free?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes. Chronoface is a free, open-source (MIT) minimalist clock screensaver for macOS. No subscriptions, no ads, no accounts. The full source code is on GitHub." } },
+        { "@type": "Question", "name": "Which Macs does Chronoface support?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Any Mac running macOS 13 Ventura or newer. The installer is universal and runs natively on both Apple Silicon and Intel Macs." } },
+        { "@type": "Question", "name": "How is Chronoface different from Fliqlo, Padbury Clock or Bauhaus Clock?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Fliqlo and Padbury Clock are digital-style clocks. Chronoface is a true analog watch face with 16 curated dial themes, three movement styles and a luminescent night mode. Unlike paid clock screensavers such as Bauhaus Clock, it is completely free and open source." } },
+        { "@type": "Question", "name": "Does Chronoface need an internet connection?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. The clock, night mode and sunrise/sunset calculations work fully offline. Only the optional live weather complication fetches data." } },
+        { "@type": "Question", "name": "Can I try Chronoface before installing?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes. The live web demo at chronoface.perek.rest runs the exact same dial geometry in the browser." } }
+      ]
+    }
+    </script>
+
     <section class="cta-section" id="download">
         <div class="reveal">
             <h2 class="cta-title">Make every<br>idle moment<br><em>beautiful.</em></h2>
