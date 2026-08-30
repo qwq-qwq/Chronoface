@@ -1357,11 +1357,11 @@
                 ctx.stroke();
             };
 
-            drawNightHand(hrAngle, R * 0.52, R * 0.045);
-            drawNightHand(minAngle, R * 0.74, R * 0.045);
+            drawNightHand(hrAngle, R * 0.63, R * 0.045);
+            drawNightHand(minAngle, R * 0.88, R * 0.045);
 
             // Second hand
-            const stip = polar(cx, cy, secAngle, R * 0.78);
+            const stip = polar(cx, cy, secAngle, R * 0.92);
             const stail = polar(cx, cy, secAngle + Math.PI, R * 0.15);
             ctx.strokeStyle = css(gray(0.25, 0.6));
             ctx.lineWidth = R * 0.009;
@@ -1506,11 +1506,11 @@
                 ctx.stroke();
             };
 
-            drawDayHand(hrAngle, R * 0.52, R * 0.045);
-            drawDayHand(minAngle, R * 0.74, R * 0.045);
+            drawDayHand(hrAngle, R * 0.63, R * 0.045);
+            drawDayHand(minAngle, R * 0.88, R * 0.045);
 
             // Second hand
-            const stip = polar(cx, cy, secAngle, R * 0.78);
+            const stip = polar(cx, cy, secAngle, R * 0.92);
             const stail = polar(cx, cy, secAngle + Math.PI, R * 0.15);
             ctx.strokeStyle = css(theme.sec);
             ctx.lineWidth = R * 0.009;

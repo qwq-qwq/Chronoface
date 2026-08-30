@@ -324,22 +324,22 @@ jobs:
           generate_release_notes: true
           fail_on_unmatched_files: false
           body: |
-            ## Установка
+            ## Installation
 
-            **Рекомендуется:** скачайте `Chronoface.pkg`, дважды кликните, пройдите шаги установщика.
+            **Recommended:** download `Chronoface.pkg`, double-click it and follow the installer steps.
 
-            На **macOS 14 Sonoma и новее** установится приложение Chronoface в Applications с screensaver extension. Откройте System Settings → Screen Saver → Chronoface.
+            On **macOS 14 Sonoma and later** it installs the Chronoface app into Applications together with a screensaver extension. Open System Settings → Screen Saver → Chronoface.
 
-            На **macOS 13 Ventura** установится legacy `.saver` в /Library/Screen Savers/.
+            On **macOS 13 Ventura** it installs the legacy `.saver` into /Library/Screen Savers/.
 
-            **Альтернатива:** распакуйте `Chronoface.saver.zip` и дважды кликните - только legacy `.saver` без приложения.
+            **Alternative:** unzip `Chronoface.saver.zip` and double-click it - legacy `.saver` only, without the app.
 
-            ## Удаление
+            ## Uninstall
 
-            На macOS 14+: откройте приложение Chronoface, в меню сверху выберите **Chronoface → Uninstall Chronoface…**
+            On macOS 14+: open the Chronoface app and choose **Chronoface → Uninstall Chronoface…** from the menu bar.
 
-            На macOS 13: удалите `/Library/Screen Savers/Chronoface.saver` через Finder.
+            On macOS 13: delete `/Library/Screen Savers/Chronoface.saver` in Finder.
 
             ---
 
-            Подписано Developer ID и нотарифицировано Apple - Gatekeeper не будет ругаться.
+            Signed with a Developer ID and notarized by Apple - Gatekeeper won't complain.

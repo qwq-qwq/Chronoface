@@ -1216,6 +1216,16 @@ class ChronofaceView: ScreenSaverView {
         okButton.frame = NSRect(x: windowWidth - 92, y: okY, width: 72, height: okH)
         contentView.addSubview(okButton)
 
+        // Version label (по центру нижнего ряда, между Preview/краем и OK)
+        let versionString = (Bundle(for: type(of: self))
+            .object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "dev"
+        let versionLabel = NSTextField(labelWithString: "v\(versionString)")
+        versionLabel.font = NSFont.systemFont(ofSize: 11)
+        versionLabel.textColor = .secondaryLabelColor
+        versionLabel.alignment = .center
+        versionLabel.frame = NSRect(x: (windowWidth - 120) / 2, y: okY + (okH - 16) / 2, width: 120, height: 16)
+        contentView.addSubview(versionLabel)
+
         return (contentView, NSSize(width: windowWidth, height: windowHeight))
     }
 
