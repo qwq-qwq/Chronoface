@@ -1839,8 +1839,8 @@ class ChronofaceRendererView: NSView {
         if handSpritesKey == key, hourSprite != nil, minuteSprite != nil { return }
 
         let handWidth = radius * 0.045
-        hourSprite = renderHandSprite(length: radius * 0.48, width: handWidth, scale: scale)
-        minuteSprite = renderHandSprite(length: radius * 0.68, width: handWidth, scale: scale)
+        hourSprite = renderHandSprite(length: radius * 0.63, width: handWidth, scale: scale)
+        minuteSprite = renderHandSprite(length: radius * 0.88, width: handWidth, scale: scale)
         handSpritesKey = key
     }
 
@@ -2322,7 +2322,7 @@ class ChronofaceRendererView: NSView {
 
     private func drawSecondHand(ctx: CGContext, cx: CGFloat, cy: CGFloat,
                                 angle: CGFloat, radius: CGFloat) {
-        let tip = polarToPoint(cx: cx, cy: cy, angle: angle, r: radius * 0.78)
+        let tip = polarToPoint(cx: cx, cy: cy, angle: angle, r: radius * 0.92)
         let tail = polarToPoint(cx: cx, cy: cy, angle: angle + .pi, r: radius * 0.15)
 
         let secColor = isNightMode ? NSColor(white: 0.25, alpha: 0.6) : theme.secondHand
