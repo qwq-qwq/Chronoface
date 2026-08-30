@@ -437,7 +437,7 @@ const drawHand = (cx, cy, angle, length, width, R) => {
 };
 
 const drawSecondHand = (cx, cy, angle, R) => {
-    const tip = polar(cx, cy, angle, R * 0.78);
+    const tip = polar(cx, cy, angle, R * 0.92);
     const tail = polar(cx, cy, angle + Math.PI, R * 0.15);
 
     ctx.strokeStyle = css(nightMode ? gray(0.25, 0.6) : theme.sec);
@@ -697,8 +697,8 @@ const draw = () => {
     const minuteAngle = ((minutes + secVal / 60) / 60) * Math.PI * 2;
     const secondAngle = (secVal / 60) * Math.PI * 2;
 
-    drawHand(cx, cy, hourAngle,   R * 0.48, R * 0.045, R);
-    drawHand(cx, cy, minuteAngle, R * 0.68, R * 0.045, R);
+    drawHand(cx, cy, hourAngle,   R * 0.63, R * 0.045, R);
+    drawHand(cx, cy, minuteAngle, R * 0.88, R * 0.045, R);
     drawCenterDot(cx, cy, R);
     drawSecondHand(cx, cy, secondAngle, R);
     drawSecondHandRing(cx, cy, R);

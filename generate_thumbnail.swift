@@ -196,11 +196,11 @@ func drawHand(angle: CGFloat, length: CGFloat, lineWidth: CGFloat, tailLength: C
     ctx.strokePath()
 }
 
-drawHand(angle: hourAngle, length: radius * 0.48, lineWidth: radius * 0.045, tailLength: radius * 0.08)
-drawHand(angle: minuteAngle, length: radius * 0.68, lineWidth: radius * 0.035, tailLength: radius * 0.08)
+drawHand(angle: hourAngle, length: radius * 0.63, lineWidth: radius * 0.045, tailLength: radius * 0.08)
+drawHand(angle: minuteAngle, length: radius * 0.88, lineWidth: radius * 0.035, tailLength: radius * 0.08)
 
 // Second hand
-let secTip = polarToPoint(angle: secondAngle, r: radius * 0.78)
+let secTip = polarToPoint(angle: secondAngle, r: radius * 0.92)
 let secTail = polarToPoint(angle: secondAngle + .pi, r: radius * 0.15)
 ctx.setStrokeColor(secondHandColor.cgColor)
 ctx.setLineWidth(radius * 0.01)
