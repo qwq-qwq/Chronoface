@@ -99,6 +99,25 @@ jobs:
             CURRENT_PROJECT_VERSION="$VERSION" \
             clean build
 
+      - name: Sign Sparkle components with Developer ID
+        if: env.HAS_APP_SIGNING == 'true'
+        env:
+          DEV_ID: ${{ secrets.MACOS_DEVELOPER_ID }}
+        run: |
+          set -e
+          # xcodebuild signs the app and the framework bundle but leaves
+          # Sparkle's nested helpers with the Sparkle project's own signature,
+          # which notarization rejects (no Developer ID, no secure timestamp).
+          # Re-sign inner to outer, then re-seal the app itself.
+          APP="Chronoface/build/Build/Products/Release/Chronoface.app"
+          FW="$APP/Contents/Frameworks/Sparkle.framework/Versions/B"
+          for item in "$FW/XPCServices/Downloader.xpc" "$FW/XPCServices/Installer.xpc" "$FW/Updater.app" "$FW/Autoupdate"; do
+            codesign --force --options runtime --timestamp --sign "$DEV_ID" "$item"
+          done
+          codesign --force --options runtime --timestamp --sign "$DEV_ID" "$APP/Contents/Frameworks/Sparkle.framework"
+          codesign --force --options runtime --timestamp --sign "$DEV_ID" --preserve-metadata=identifier,entitlements,flags "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+
       - name: Build ChronofaceApp (ad-hoc)
         if: env.HAS_APP_SIGNING != 'true'
         env:
