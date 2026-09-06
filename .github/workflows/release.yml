@@ -291,6 +291,91 @@ jobs:
           xcrun stapler staple "dist/Chronoface-${VERSION}.pkg"
           cp "dist/Chronoface-${VERSION}.pkg" "dist/Chronoface.pkg"
 
+      - name: Publish Sparkle feed to chronoface.perek.rest
+        if: startsWith(github.ref, 'refs/tags/v') && env.HAS_PKG_SIGNING == 'true' && env.DO_NOTARIZE == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          SPARKLE_ED25519_PRIVATE_KEY: ${{ secrets.SPARKLE_ED25519_PRIVATE_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.GARAGE_S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.GARAGE_S3_SECRET_KEY }}
+          AWS_DEFAULT_REGION: garage
+          # Garage 1.0.1 does not support the streaming checksum format newer
+          # awscli sends by default (same workaround as the Jenkins deploy).
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+          S3_ENDPOINT: https://s3.perek.rest
+        run: |
+          set -e
+          # The feed serves the same notarized+stapled .pkg as the manual
+          # install: Sparkle runs it as a guided package install, so app,
+          # extension and legacy saver update together.
+          PKG="dist/Chronoface-${VERSION}.pkg"
+
+          # Sparkle CLI tools (sign_update); keep the version in sync with the SPM dependency
+          curl -sSL -o "$RUNNER_TEMP/sparkle.tar.xz" \
+            "https://github.com/sparkle-project/Sparkle/releases/download/2.9.6/Sparkle-2.9.6.tar.xz"
+          mkdir -p "$RUNNER_TEMP/sparkle"
+          tar -xJf "$RUNNER_TEMP/sparkle.tar.xz" -C "$RUNNER_TEMP/sparkle"
+
+          KEY_FILE="$RUNNER_TEMP/sparkle_ed25519"
+          printf '%s' "$SPARKLE_ED25519_PRIVATE_KEY" > "$KEY_FILE"
+          SIG_LINE=$("$RUNNER_TEMP/sparkle/bin/sign_update" --ed-key-file "$KEY_FILE" "$PKG")
+          rm -f "$KEY_FILE"
+          echo "sign_update: $SIG_LINE"
+          ED_SIG=$(echo "$SIG_LINE" | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p')
+          LENGTH=$(echo "$SIG_LINE" | sed -n 's/.*length="\([^"]*\)".*/\1/p')
+          test -n "$ED_SIG" && test -n "$LENGTH"
+
+          # Current feed, or a skeleton on the very first release
+          if ! curl -sSf -o appcast.xml "https://chronoface.perek.rest/appcast.xml"; then
+            cat > appcast.xml <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+            <channel>
+              <title>Chronoface</title>
+              <link>https://chronoface.perek.rest/appcast.xml</link>
+              <description>Chronoface updates</description>
+              <language>en</language>
+            </channel>
+          </rss>
+          XML
+          fi
+
+          python3 - "$VERSION" "$ED_SIG" "$LENGTH" <<'PY'
+          import re, sys
+          from datetime import datetime, timezone
+          version, sig, length = sys.argv[1:4]
+          with open("appcast.xml") as f:
+              s = f.read()
+          # A re-run of the same tag rebuilds the pkg byte-differently and
+          # re-uploads it: replace the version's item instead of keeping a
+          # signature of a file no longer served.
+          item_re = re.compile(r"[ \t]*<item>.*?</item>\n", re.S)
+          s = item_re.sub(lambda m: "" if f"<sparkle:shortVersionString>{version}<" in m.group(0) else m.group(0), s)
+          pub = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S +0000")
+          # CFBundleVersion equals the marketing version in this project, so
+          # sparkle:version carries the same dotted string.
+          item = f"""    <item>
+                <title>Version {version}</title>
+                <pubDate>{pub}</pubDate>
+                <sparkle:version>{version}</sparkle:version>
+                <sparkle:shortVersionString>{version}</sparkle:shortVersionString>
+                <sparkle:minimumSystemVersion>14.6</sparkle:minimumSystemVersion>
+                <enclosure url="https://chronoface.perek.rest/downloads/Chronoface-{version}.pkg" length="{length}" type="application/octet-stream" sparkle:installationType="package" sparkle:edSignature="{sig}"/>
+              </item>
+          """
+          item = "\n".join(line[10:] if line.startswith(" " * 10) else line for line in item.splitlines()) + "\n"
+          s = s.replace("  </channel>", item + "  </channel>", 1)
+          with open("appcast.xml", "w") as f:
+              f.write(s)
+          print(f"appcast now carries {version}")
+          PY
+
+          cat appcast.xml
+          aws --endpoint-url "$S3_ENDPOINT" s3 cp "$PKG" "s3://chronoface/downloads/Chronoface-$VERSION.pkg"
+          aws --endpoint-url "$S3_ENDPOINT" s3 cp "$PKG" "s3://chronoface/downloads/Chronoface-latest.pkg"
+          aws --endpoint-url "$S3_ENDPOINT" s3 cp appcast.xml "s3://chronoface/appcast.xml" --content-type "application/xml"
+
       - name: Package legacy .saver as standalone zip
         run: |
           cd Chronoface/build/Build/Products/Release

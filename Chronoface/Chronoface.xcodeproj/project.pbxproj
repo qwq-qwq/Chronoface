@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B25A4CE10000000000000003 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = B25A4CE10000000000000002 /* Sparkle */; };
 		B2ACC7162FC3278400A04704 /* ChronofaceExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B2ACC70F2FC3278400A04704 /* ChronofaceExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B2CF1D012FC4000000000001 /* ScreenSaver.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B2CF1D002FC4000000000001 /* ScreenSaver.framework */; };
 /* End PBXBuildFile section */
@@ -85,6 +86,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B25A4CE10000000000000003 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -183,6 +185,7 @@
 			);
 			name = ChronofaceApp;
 			packageProductDependencies = (
+				B25A4CE10000000000000002 /* Sparkle */,
 			);
 			productName = ChronofaceApp;
 			productReference = B2ACC6CF2FC3239B00A04704 /* ChronofaceApp.app */;
@@ -240,6 +243,9 @@
 			);
 			mainGroup = B27AA03C2F5B90E700AD4025;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				B25A4CE10000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B27AA0472F5B90E700AD4025 /* Products */;
 			projectDirPath = "";
@@ -642,6 +648,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		B25A4CE10000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B25A4CE10000000000000002 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B25A4CE10000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = B27AA03D2F5B90E700AD4025 /* Project object */;
 }

@@ -30,6 +30,12 @@
 	<string></string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>SUFeedURL</key>
+	<string>https://chronoface.perek.rest/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>lgvpR7wbQzs3VH5ig8mTn2aMIr64WXaro/ZOAvQLjJE=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

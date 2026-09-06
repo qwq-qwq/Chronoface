@@ -1,8 +1,14 @@
 import AppKit
+import Sparkle
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var window: NSWindow?
     private var settingsRenderer: ChronofaceRendererView?
+    // Sparkle auto-updates: the feed serves the same notarized .pkg the
+    // manual install uses, so app, extension and legacy saver update together.
+    private let updaterController = SPUStandardUpdaterController(
+        startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil
+    )
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupMenu()
@@ -49,6 +55,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appMenu.addItem(withTitle: "About Chronoface",
                         action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)),
                         keyEquivalent: "")
+        let updatesItem = NSMenuItem(title: "Check for Updates…",
+                                     action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)),
+                                     keyEquivalent: "")
+        updatesItem.target = updaterController
+        appMenu.addItem(updatesItem)
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Uninstall Chronoface…",
                         action: #selector(uninstallChronoface(_:)),
