@@ -361,7 +361,7 @@ jobs:
           fi
 
           python3 - "$VERSION" "$ED_SIG" "$LENGTH" <<'PY'
-          import re, sys
+          import os, re, sys
           from datetime import datetime, timezone
           version, sig, length = sys.argv[1:4]
           with open("appcast.xml") as f:
@@ -372,11 +372,22 @@ jobs:
           item_re = re.compile(r"[ \t]*<item>.*?</item>\n", re.S)
           s = item_re.sub(lambda m: "" if f"<sparkle:shortVersionString>{version}<" in m.group(0) else m.group(0), s)
           pub = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S +0000")
+          # Optional release notes for Sparkle's update dialog: an HTML
+          # fragment committed as release-notes/<version>.html.
+          notes_path = f"release-notes/{version}.html"
+          description = ""
+          if os.path.exists(notes_path):
+              with open(notes_path, encoding="utf-8") as f:
+                  notes = f.read().strip().replace("]]>", "]]&gt;")
+              description = f"\n      <description><![CDATA[\n{notes}\n      ]]></description>"
+              print(f"release notes: {notes_path}")
+          else:
+              print(f"release notes: {notes_path} not found, the item goes without a description")
           # CFBundleVersion equals the marketing version in this project, so
           # sparkle:version carries the same dotted string.
           item = f"""    <item>
                 <title>Version {version}</title>
-                <pubDate>{pub}</pubDate>
+                <pubDate>{pub}</pubDate>{description}
                 <sparkle:version>{version}</sparkle:version>
                 <sparkle:shortVersionString>{version}</sparkle:shortVersionString>
                 <sparkle:minimumSystemVersion>14.6</sparkle:minimumSystemVersion>

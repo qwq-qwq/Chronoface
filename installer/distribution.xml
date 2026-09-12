@@ -3,7 +3,8 @@
     <title>Chronoface</title>
     <organization>app.perek.rest</organization>
     <domains enable_localSystem="true"/>
-    <options customize="never" require-scripts="true" rootVolumeOnly="true"/>
+    <!-- hostArchitectures с arm64: иначе Installer на Apple Silicon запускает postinstall под Rosetta и просит её установить -->
+    <options customize="never" require-scripts="true" rootVolumeOnly="true" hostArchitectures="x86_64,arm64"/>
     <welcome    file="welcome.html"    mime-type="text/html"/>
     <conclusion file="conclusion.html" mime-type="text/html"/>
     <background file="background.png" alignment="bottomleft" scaling="proportional"/>
