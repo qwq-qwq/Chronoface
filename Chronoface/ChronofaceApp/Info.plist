@@ -36,6 +36,10 @@
 	<string>lgvpR7wbQzs3VH5ig8mTn2aMIr64WXaro/ZOAvQLjJE=</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
+	<key>NSLocationUsageDescription</key>
+	<string>Chronoface uses your location once to find your city for the weather and automatic day/night mode.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Chronoface uses your location once to find your city for the weather and automatic day/night mode.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

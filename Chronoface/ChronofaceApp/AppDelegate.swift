@@ -9,9 +9,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let updaterController = SPUStandardUpdaterController(
         startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil
     )
+    // Кнопка «My Location» в настройках: CoreLocation доступен только app-таргету,
+    // extension получает выбранное место через общие настройки.
+    private let locationLookup = LocationLookup()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupMenu()
+        let lookup = locationLookup
+        ChronofaceRendererView.locationProvider = { completion in
+            lookup.request(completion: completion)
+        }
 
         // Создаём transient renderer чтобы использовать его buildConfigureContent()
         // как основной UI настроек. Renderer владеет target=self у кнопок,
