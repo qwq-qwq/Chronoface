@@ -475,12 +475,37 @@ enum SettingsStore {
         }
     }
 
+    /// Прежний ключ: название города из таблицы `cities`. Читается только для миграции
+    /// в `location`, новые версии его не пишут.
     static var selectedCity: String {
+        return (get(cityKey) as? String) ?? "Kyiv"
+    }
+
+    private static let locationKey = "ChronofaceLocation"
+
+    /// Место для погоды и авторежима день/ночь: выбирается поиском в настройках или
+    /// геопозицией в Chronoface.app, хранится словарём name/lat/lon/tz.
+    /// Пока место не выбрано, берётся старый `ChronofaceCity` по таблице `cities`.
+    static var location: LocationInfo {
         get {
-            return (get(cityKey) as? String) ?? "Kyiv"
+            if let dict = get(locationKey) as? [String: Any],
+               let name = dict["name"] as? String,
+               let lat = dict["lat"] as? Double,
+               let lon = dict["lon"] as? Double,
+               let tz = dict["tz"] as? String {
+                return LocationInfo(name: name, lat: lat, lon: lon, timeZoneID: tz)
+            }
+            let city = cities.first(where: { $0.name == selectedCity }) ?? cities[0]
+            return LocationInfo(name: city.name, lat: city.lat, lon: city.lon, timeZoneID: city.tz.identifier)
         }
         set {
-            set(newValue, key: cityKey)
+            let dict: [String: Any] = [
+                "name": newValue.name,
+                "lat": newValue.lat,
+                "lon": newValue.lon,
+                "tz": newValue.timeZoneID,
+            ]
+            set(dict, key: locationKey)
         }
     }
 
@@ -725,8 +750,38 @@ enum BackgroundStore {
     }
 }
 
+// MARK: - Location
+
+/// Выбранное место: название для подписи на циферблате, координаты для погоды
+/// и восхода/заката, IANA-идентификатор часового пояса.
+struct LocationInfo: Equatable {
+    let name: String
+    let lat: Double
+    let lon: Double
+    let timeZoneID: String
+
+    var timeZone: TimeZone { TimeZone(identifier: timeZoneID) ?? .current }
+
+    /// Координаты проходят через plist, поэтому сравниваем с допуском, а не побитово.
+    static func == (a: LocationInfo, b: LocationInfo) -> Bool {
+        return a.name == b.name && a.timeZoneID == b.timeZoneID
+            && abs(a.lat - b.lat) < 1e-6 && abs(a.lon - b.lon) < 1e-6
+    }
+}
+
+/// Ошибка определения геопозиции. `settingsURL` открывает нужный раздел System Settings,
+/// когда исправить проблему может только пользователь.
+struct LocationLookupError: LocalizedError {
+    let message: String
+    var settingsURL: URL?
+
+    var errorDescription: String? { message }
+}
+
 // MARK: - City database
 
+/// Прежний фиксированный список городов: нужен только для миграции сохранённого
+/// `ChronofaceCity` в `SettingsStore.location`.
 struct CityInfo {
     let name: String
     let lat: Double
@@ -758,6 +813,459 @@ let cities: [CityInfo] = [
     CityInfo(name: "Baku",         lat: 40.4093,  lon: 49.8671,   tz: TimeZone(identifier: "Asia/Baku")!),
     CityInfo(name: "Brussels",     lat: 50.8503,  lon: 4.3517,    tz: TimeZone(identifier: "Europe/Brussels")!),
 ]
+
+// MARK: - City search
+
+/// Поиск города в настройках через Open-Meteo geocoding (тот же сервис, что и погода,
+/// без ключей). Результаты показываются в дочернем окне под полем: фокус остаётся
+/// в поле, стрелки листают список, Enter выбирает, Esc отменяет.
+final class CitySearchController: NSObject, NSSearchFieldDelegate, NSTableViewDataSource, NSTableViewDelegate {
+    private struct Match {
+        let id: Int
+        let location: LocationInfo
+        let detail: String
+        let isEnglish: Bool
+    }
+
+    /// Ответы параллельных запросов на разных языках: URLSession отдаёт их с разных потоков.
+    private final class SearchBatch {
+        let lock = NSLock()
+        var matches: [[Match]]
+        var failures = 0
+
+        init(languages: Int) {
+            matches = Array(repeating: [], count: languages)
+        }
+    }
+
+    let field: NSSearchField
+    var onPick: ((LocationInfo) -> Void)?
+
+    private var current: LocationInfo
+    private var matches: [Match] = []
+    private var emptyMessage: String?
+    private var pendingSearch: DispatchWorkItem?
+    private var activeBatch: SearchBatch?
+    private var tasks: [URLSessionDataTask] = []
+    private var keyMonitor: Any?
+    private var panel: NSPanel?
+    private let table = CityResultsTableView()
+
+    /// Open-Meteo ищет по названиям на языке запроса: «Київ» находится только с `uk`.
+    /// Поэтому нелатинский запрос дублируем на языки системы.
+    private static let systemLanguages: [String] = {
+        var codes: [String] = []
+        for identifier in Locale.preferredLanguages {
+            let code = String(identifier.prefix(while: { $0 != "-" && $0 != "_" })).lowercased()
+            if !code.isEmpty, code != "en", !codes.contains(code) {
+                codes.append(code)
+            }
+        }
+        return Array(codes.prefix(2))
+    }()
+
+    init(frame: NSRect, current: LocationInfo) {
+        self.current = current
+        let searchField = CitySearchField(frame: frame)
+        field = searchField
+        super.init()
+
+        searchField.onFocus = { [weak self] in
+            self?.prepareForTyping()
+        }
+        field.placeholderString = "Search city"
+        field.stringValue = current.name
+        field.delegate = self
+        field.target = self
+        field.action = #selector(searchFieldAction(_:))
+
+        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("city"))
+        column.resizingMask = .autoresizingMask
+        table.addTableColumn(column)
+        table.headerView = nil
+        table.style = .plain
+        table.rowHeight = 22
+        table.intercellSpacing = .zero
+        table.backgroundColor = .clear
+        table.dataSource = self
+        table.delegate = self
+        table.target = self
+        table.action = #selector(resultClicked(_:))
+    }
+
+    deinit {
+        removeKeyMonitor()
+        cancelRequests()
+        if let panel = panel {
+            panel.parent?.removeChildWindow(panel)
+            panel.orderOut(nil)
+        }
+    }
+
+    func setCurrent(_ location: LocationInfo) {
+        current = location
+        if field.currentEditor() != nil {
+            // Конец редактирования сам подставит новое название.
+            field.window?.makeFirstResponder(nil)
+        } else {
+            field.stringValue = location.name
+        }
+    }
+
+    // MARK: Editing
+
+    private func prepareForTyping() {
+        field.placeholderString = current.name
+        field.stringValue = ""
+    }
+
+    func controlTextDidBeginEditing(_ obj: Notification) {
+        installKeyMonitor()
+    }
+
+    func controlTextDidChange(_ obj: Notification) {
+        pendingSearch?.cancel()
+        cancelRequests()
+        let query = trimmedQuery
+        guard query.count >= 2 else {
+            hideResults()
+            return
+        }
+        let work = DispatchWorkItem { [weak self] in
+            self?.search(query)
+        }
+        pendingSearch = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: work)
+    }
+
+    func controlTextDidEndEditing(_ obj: Notification) {
+        removeKeyMonitor()
+        pendingSearch?.cancel()
+        cancelRequests()
+        hideResults()
+        field.placeholderString = "Search city"
+        field.stringValue = current.name
+    }
+
+    @objc private func searchFieldAction(_ sender: NSSearchField) {
+        // Крестик очистки не присылает controlTextDidChange.
+        guard trimmedQuery.isEmpty else { return }
+        pendingSearch?.cancel()
+        cancelRequests()
+        hideResults()
+    }
+
+    private var trimmedQuery: String {
+        return field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Клавиши ловим локальным монитором, а не через doCommandBy: иначе Enter раньше
+    /// поля перехватывает кнопка OK с keyEquivalent "\r".
+    private func installKeyMonitor() {
+        guard keyMonitor == nil else { return }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self = self, event.window === self.field.window, self.field.currentEditor() != nil else {
+                return event
+            }
+            return self.handleKey(event) ? nil : event
+        }
+    }
+
+    private func removeKeyMonitor() {
+        guard let monitor = keyMonitor else { return }
+        NSEvent.removeMonitor(monitor)
+        keyMonitor = nil
+    }
+
+    private func handleKey(_ event: NSEvent) -> Bool {
+        let hasResults = panel?.isVisible == true && !matches.isEmpty
+        switch event.keyCode {
+        case 125, 126: // ↓ ↑
+            guard hasResults else { return false }
+            moveSelection(by: event.keyCode == 125 ? 1 : -1)
+            return true
+        case 36, 76: // Return, Enter
+            if hasResults {
+                pick(max(table.selectedRow, 0))
+                return true
+            }
+            // Ответ ещё не пришёл: ищем сразу, а не закрываем окно кнопкой OK.
+            let query = trimmedQuery
+            guard query.count >= 2 else { return false }
+            pendingSearch?.cancel()
+            search(query)
+            return true
+        case 53: // Esc
+            field.window?.makeFirstResponder(nil)
+            return true
+        default:
+            return false
+        }
+    }
+
+    // MARK: Search
+
+    private func search(_ query: String) {
+        cancelRequests()
+        let nonLatin = query.unicodeScalars.contains { $0.value > 0x024F && $0.properties.isAlphabetic }
+        let languages = ["en"] + (nonLatin ? CitySearchController.systemLanguages : [])
+        let batch = SearchBatch(languages: languages.count)
+        activeBatch = batch
+        let group = DispatchGroup()
+
+        for (index, language) in languages.enumerated() {
+            var components = URLComponents(string: "https://geocoding-api.open-meteo.com/v1/search")
+            components?.queryItems = [
+                URLQueryItem(name: "name", value: query),
+                URLQueryItem(name: "count", value: "12"),
+                URLQueryItem(name: "language", value: language),
+                URLQueryItem(name: "format", value: "json"),
+            ]
+            guard let url = components?.url else { continue }
+            group.enter()
+            let task = URLSession.shared.dataTask(with: url) { data, _, _ in
+                let parsed = data.flatMap { CitySearchController.parseMatches($0, language: language) }
+                batch.lock.lock()
+                if let parsed = parsed {
+                    batch.matches[index] = parsed
+                } else {
+                    batch.failures += 1
+                }
+                batch.lock.unlock()
+                group.leave()
+            }
+            tasks.append(task)
+            task.resume()
+        }
+
+        group.notify(queue: .main) { [weak self] in
+            // Пока ждали ответ, запрос сменился или редактирование закончилось.
+            guard let self = self, self.activeBatch === batch, self.field.currentEditor() != nil else { return }
+            // Один id приходит с разных языков, а одноимённые сёла одного региона
+            // в списке всё равно не отличить: оставляем первое.
+            var seenIDs = Set<Int>()
+            var seenLabels = Set<String>()
+            let unique = batch.matches.joined().filter { match in
+                seenIDs.insert(match.id).inserted && seenLabels.insert(match.location.name + "|" + match.detail).inserted
+            }
+            self.matches = Array(unique.prefix(8))
+            if self.matches.isEmpty {
+                self.emptyMessage = batch.failures == languages.count ? "Search is unavailable offline" : "No matching cities"
+            }
+            self.showResults()
+        }
+    }
+
+    private static func parseMatches(_ data: Data, language: String) -> [Match]? {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+        let items = json["results"] as? [[String: Any]] ?? []
+        return items.compactMap { item -> Match? in
+            guard let id = item["id"] as? Int,
+                  let name = item["name"] as? String,
+                  let lat = item["latitude"] as? Double,
+                  let lon = item["longitude"] as? Double,
+                  let timeZoneID = item["timezone"] as? String else {
+                return nil
+            }
+            let detail = [item["admin1"] as? String, item["country"] as? String]
+                .compactMap { $0 }
+                .filter { !$0.isEmpty && $0 != name }
+                .joined(separator: ", ")
+            return Match(id: id,
+                         location: LocationInfo(name: name, lat: lat, lon: lon, timeZoneID: timeZoneID),
+                         detail: detail,
+                         isEnglish: language == "en")
+        }
+    }
+
+    private func cancelRequests() {
+        activeBatch = nil
+        tasks.forEach { $0.cancel() }
+        tasks.removeAll()
+    }
+
+    // MARK: Picking
+
+    private func pick(_ row: Int) {
+        guard matches.indices.contains(row) else { return }
+        let match = matches[row]
+        // Сначала запоминаем выбор: конец редактирования подставит в поле уже его.
+        current = match.location
+        field.window?.makeFirstResponder(nil)
+        if match.isEnglish {
+            onPick?(match.location)
+        } else {
+            resolveEnglishName(match) { [weak self] location in
+                self?.onPick?(location)
+            }
+        }
+    }
+
+    /// Шрифт циферблата (Futura) без кириллицы и CJK, поэтому для подписи берём
+    /// английское название, даже если место нашли по запросу на другом языке.
+    private func resolveEnglishName(_ match: Match, completion: @escaping (LocationInfo) -> Void) {
+        var components = URLComponents(string: "https://geocoding-api.open-meteo.com/v1/get")
+        components?.queryItems = [
+            URLQueryItem(name: "id", value: String(match.id)),
+            URLQueryItem(name: "language", value: "en"),
+        ]
+        guard let url = components?.url else {
+            completion(match.location)
+            return
+        }
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            var name = match.location.name
+            if let data = data,
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let english = json["name"] as? String, !english.isEmpty {
+                name = english
+            }
+            let location = LocationInfo(name: name, lat: match.location.lat, lon: match.location.lon,
+                                        timeZoneID: match.location.timeZoneID)
+            DispatchQueue.main.async {
+                completion(location)
+            }
+        }.resume()
+    }
+
+    // MARK: Results list
+
+    private func showResults() {
+        guard let window = field.window else { return }
+        let panel = self.panel ?? makePanel()
+        self.panel = panel
+
+        let height = CGFloat(max(matches.count, 1)) * table.rowHeight + 8
+        let fieldFrame = window.convertToScreen(field.convert(field.bounds, to: nil))
+        panel.setFrame(NSRect(x: fieldFrame.minX, y: fieldFrame.minY - height - 4,
+                              width: max(fieldFrame.width, 300), height: height), display: false)
+        table.reloadData()
+        table.sizeLastColumnToFit()
+        if !matches.isEmpty {
+            table.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
+        }
+        if panel.parent == nil {
+            window.addChildWindow(panel, ordered: .above)
+        }
+        panel.orderFront(nil)
+    }
+
+    private func hideResults() {
+        guard let panel = panel, panel.isVisible else { return }
+        panel.parent?.removeChildWindow(panel)
+        panel.orderOut(nil)
+    }
+
+    private func makePanel() -> NSPanel {
+        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 100),
+                            styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
+        panel.isReleasedWhenClosed = false
+        panel.hasShadow = true
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+
+        let background = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 300, height: 100))
+        background.material = .menu
+        background.state = .active
+        background.wantsLayer = true
+        background.layer?.cornerRadius = 6
+        background.layer?.masksToBounds = true
+        panel.contentView = background
+
+        let scroll = NSScrollView(frame: background.bounds.insetBy(dx: 0, dy: 4))
+        scroll.autoresizingMask = [.width, .height]
+        scroll.drawsBackground = false
+        scroll.hasVerticalScroller = false
+        scroll.documentView = table
+        background.addSubview(scroll)
+        return panel
+    }
+
+    // MARK: NSTableViewDataSource, NSTableViewDelegate
+
+    func numberOfRows(in tableView: NSTableView) -> Int {
+        return matches.isEmpty ? 1 : matches.count
+    }
+
+    func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+        let identifier = NSUserInterfaceItemIdentifier("cityCell")
+        let cell: NSTableCellView
+        if let reused = tableView.makeView(withIdentifier: identifier, owner: nil) as? NSTableCellView {
+            cell = reused
+        } else {
+            cell = NSTableCellView(frame: NSRect(x: 0, y: 0, width: tableView.bounds.width, height: tableView.rowHeight))
+            cell.identifier = identifier
+            let label = NSTextField(labelWithString: "")
+            label.lineBreakMode = .byTruncatingTail
+            label.frame = NSRect(x: 8, y: 3, width: cell.bounds.width - 16, height: 16)
+            label.autoresizingMask = [.width]
+            cell.addSubview(label)
+            cell.textField = label
+        }
+
+        let text = NSMutableAttributedString()
+        if matches.isEmpty {
+            text.append(NSAttributedString(string: emptyMessage ?? "", attributes: [
+                .font: NSFont.systemFont(ofSize: 13),
+                .foregroundColor: NSColor.secondaryLabelColor,
+            ]))
+        } else {
+            let match = matches[row]
+            text.append(NSAttributedString(string: match.location.name, attributes: [
+                .font: NSFont.systemFont(ofSize: 13),
+                .foregroundColor: NSColor.labelColor,
+            ]))
+            if !match.detail.isEmpty {
+                text.append(NSAttributedString(string: "  " + match.detail, attributes: [
+                    .font: NSFont.systemFont(ofSize: 11),
+                    .foregroundColor: NSColor.secondaryLabelColor,
+                ]))
+            }
+        }
+        cell.textField?.attributedStringValue = text
+        return cell
+    }
+
+    func tableView(_ tableView: NSTableView, shouldSelectRow row: Int) -> Bool {
+        return !matches.isEmpty
+    }
+
+    @objc private func resultClicked(_ sender: NSTableView) {
+        pick(sender.clickedRow)
+    }
+
+    private func moveSelection(by delta: Int) {
+        let row = min(max(table.selectedRow + delta, 0), matches.count - 1)
+        table.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+        table.scrollRowToVisible(row)
+    }
+}
+
+/// При фокусе поле очищается, а название текущего города уходит в placeholder:
+/// новый запрос не надо дописывать к старому названию. Фокус принимается только
+/// от пользователя (клик или Tab): при первом показе окно само ставит фокус
+/// в первое текстовое поле, и настройки открывались бы с пустым полем поиска.
+private final class CitySearchField: NSSearchField {
+    var onFocus: (() -> Void)?
+
+    override func becomeFirstResponder() -> Bool {
+        guard let event = NSApp?.currentEvent, event.type == .leftMouseDown || event.type == .keyDown else {
+            return false
+        }
+        onFocus?()
+        return super.becomeFirstResponder()
+    }
+}
+
+/// Список результатов живёт в окне, которое не становится key: принимаем первый
+/// же клик, иначе он уйдёт на активацию окна.
+private final class CityResultsTableView: NSTableView {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        return true
+    }
+}
 
 // MARK: - Main screensaver view
 
@@ -794,6 +1302,11 @@ class ChronofaceRendererView: NSView {
     private weak var accentColorWell: NSColorWell?
     private weak var digitsColorWell: NSColorWell?
     private weak var backgroundColorWell: NSColorWell?
+    private var citySearch: CitySearchController?
+
+    /// Определение геопозиции для кнопки «My Location». Задаёт Chronoface.app, где есть
+    /// CoreLocation; в extension остаётся nil, и кнопка не показывается.
+    static var locationProvider: ((@escaping (Result<LocationInfo, Error>) -> Void) -> Void)?
 
     // Полноэкранный предпросмотр из окна настроек (только app-таргет,
     // в extension-копии этого кода нет).
@@ -848,7 +1361,7 @@ class ChronofaceRendererView: NSView {
         let backgroundColor: String  // фон
     }
 
-    /// Effective night mode: resolves `.auto` using sunrise/sunset for the selected city.
+    /// Effective night mode: resolves `.auto` using sunrise/sunset for the selected location.
     /// Кешируется поминутно: solar trig дорогое, считать на каждом из ~30 кадров/сек незачем.
     private var nightModeCache: (minute: Int, value: Bool)?
     private var isNightMode: Bool {
@@ -864,14 +1377,10 @@ class ChronofaceRendererView: NSView {
             if let cache = nightModeCache, cache.minute == minute {
                 return cache.value
             }
-            let cityName = SettingsStore.selectedCity
-            guard let city = cities.first(where: { $0.name == cityName }) else {
-                nightModeCache = (minute, false)
-                return false
-            }
-            let times = solarTimes(lat: city.lat, lon: city.lon, tz: city.tz)
+            let location = SettingsStore.location
+            let times = solarTimes(lat: location.lat, lon: location.lon, tz: location.timeZone)
             var calendar = Calendar.current
-            calendar.timeZone = city.tz
+            calendar.timeZone = location.timeZone
             let now = Date()
             let hour = Double(calendar.component(.hour, from: now))
                      + Double(calendar.component(.minute, from: now)) / 60.0
@@ -917,6 +1426,8 @@ class ChronofaceRendererView: NSView {
     // Weather data
     private var currentTemperature: String?
     private var currentCity: String?
+    /// Место, для которого загружена или загружается температура.
+    private var weatherLocation: LocationInfo?
     private var lastWeatherFetch: Date?
     private var isFetchingWeather = false
 
@@ -978,6 +1489,11 @@ class ChronofaceRendererView: NSView {
         backgroundColor = SettingsStore.backgroundColor
         customBackgroundImage = useCustomBackground ? BackgroundStore.loadCachedImage() : nil
         customBackgroundVersion &+= 1
+        // Место могли сменить в другом процессе: пересчитать день/ночь и погоду.
+        nightModeCache = nil
+        if let shown = weatherLocation, shown != SettingsStore.location {
+            locationDidChange()
+        }
         let newInterval = ChronofaceRendererView.animationInterval(for: movement)
         if newInterval != animationTimeInterval {
             animationTimeInterval = newInterval
@@ -1244,22 +1760,30 @@ class ChronofaceRendererView: NSView {
         tempCheckbox.frame = NSRect(x: 160, y: cbY, width: 200, height: cbH)
         contentView.addSubview(tempCheckbox)
 
-        // City popup
+        // City: поиск по Open-Meteo, а в Chronoface.app ещё и кнопка геопозиции
         let cityLabel = NSTextField(labelWithString: "City:")
         cityLabel.font = NSFont.systemFont(ofSize: 13, weight: .medium)
         cityLabel.frame = NSRect(x: 20, y: cityY + 3, width: 40, height: 20)
         contentView.addSubview(cityLabel)
 
-        let cityPopup = NSPopUpButton(frame: NSRect(x: 60, y: cityY, width: 180, height: cityH), pullsDown: false)
-        for city in cities {
-            cityPopup.addItem(withTitle: city.name)
+        let locateWidth: CGFloat = ChronofaceRendererView.locationProvider == nil ? 0 : 120
+        let searchRight = windowWidth - marginX - (locateWidth > 0 ? locateWidth + 8 : 0)
+        let search = CitySearchController(frame: NSRect(x: 60, y: cityY + 2, width: searchRight - 60, height: 22),
+                                          current: SettingsStore.location)
+        search.onPick = { [weak self] location in
+            self?.applyLocation(location)
         }
-        if let idx = cities.firstIndex(where: { $0.name == SettingsStore.selectedCity }) {
-            cityPopup.selectItem(at: idx)
+        contentView.addSubview(search.field)
+        citySearch = search
+
+        if locateWidth > 0 {
+            let locateButton = NSButton(title: "My Location", target: self, action: #selector(useMyLocation(_:)))
+            locateButton.bezelStyle = .rounded
+            locateButton.image = NSImage(systemSymbolName: "location", accessibilityDescription: nil)
+            locateButton.imagePosition = .imageLeading
+            locateButton.frame = NSRect(x: windowWidth - marginX - locateWidth, y: cityY, width: locateWidth, height: cityH)
+            contentView.addSubview(locateButton)
         }
-        cityPopup.target = self
-        cityPopup.action = #selector(cityChanged(_:))
-        contentView.addSubview(cityPopup)
 
         // Movement label
         let movementLabel = NSTextField(labelWithString: "Movement:")
@@ -1396,14 +1920,58 @@ class ChronofaceRendererView: NSView {
         }
     }
 
-    @objc private func cityChanged(_ sender: NSPopUpButton) {
-        guard let title = sender.selectedItem?.title else { return }
-        SettingsStore.selectedCity = title
-        currentCity = title
-        lastWeatherFetch = nil
+    private func applyLocation(_ location: LocationInfo) {
+        SettingsStore.location = location
+        citySearch?.setCurrent(location)
+        locationDidChange()
+        setNeedsDisplay(bounds)
+    }
+
+    /// Сбрасывает погоду и кэш день/ночь после смены места. Температура обнуляется
+    /// и ради ключа статического слоя: подписи города в нём нет.
+    private func locationDidChange() {
         currentTemperature = nil
+        currentCity = nil
+        weatherLocation = nil
+        lastWeatherFetch = nil
+        nightModeCache = nil
         if showTemperature {
             fetchWeatherIfNeeded()
+        }
+    }
+
+    @objc private func useMyLocation(_ sender: NSButton) {
+        guard let provider = ChronofaceRendererView.locationProvider else { return }
+        let title = sender.title
+        sender.title = "Locating…"
+        sender.isEnabled = false
+        provider { [weak self, weak sender] result in
+            sender?.title = title
+            sender?.isEnabled = true
+            switch result {
+            case .success(let location):
+                self?.applyLocation(location)
+            case .failure(let error):
+                let settingsURL = (error as? LocationLookupError)?.settingsURL
+                let alert = NSAlert()
+                alert.messageText = "Couldn't find your location"
+                alert.informativeText = error.localizedDescription
+                alert.alertStyle = .warning
+                alert.addButton(withTitle: "OK")
+                if settingsURL != nil {
+                    alert.addButton(withTitle: "Open System Settings")
+                }
+                let handler: (NSApplication.ModalResponse) -> Void = { response in
+                    if response == .alertSecondButtonReturn, let url = settingsURL {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+                if let window = sender?.window {
+                    alert.beginSheetModal(for: window, completionHandler: handler)
+                } else {
+                    handler(alert.runModal())
+                }
+            }
         }
     }
 
@@ -1702,32 +2270,37 @@ class ChronofaceRendererView: NSView {
         guard !isFetchingWeather else { return }
         isFetchingWeather = true
 
-        let selectedName = SettingsStore.selectedCity
-        guard let city = cities.first(where: { $0.name == selectedName }) else {
-            isFetchingWeather = false
-            return
-        }
-        currentCity = city.name
-        fetchTemperature(lat: city.lat, lon: city.lon)
+        let location = SettingsStore.location
+        weatherLocation = location
+        currentCity = location.name
+        fetchTemperature(for: location)
     }
 
-    private func fetchTemperature(lat: Double, lon: Double) {
-        let urlStr = "https://api.open-meteo.com/v1/forecast?latitude=\(lat)&longitude=\(lon)&current=temperature_2m"
+    private func fetchTemperature(for location: LocationInfo) {
+        let urlStr = "https://api.open-meteo.com/v1/forecast?latitude=\(location.lat)&longitude=\(location.lon)&current=temperature_2m"
         guard let url = URL(string: urlStr) else {
             isFetchingWeather = false
             return
         }
         URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
             DispatchQueue.main.async {
-                self?.isFetchingWeather = false
+                guard let self = self else { return }
+                self.isFetchingWeather = false
+                // Пока шёл запрос, место сменили: ответ устарел, загружаем для нового.
+                guard self.weatherLocation == location else {
+                    if self.showTemperature {
+                        self.fetchWeatherIfNeeded()
+                    }
+                    return
+                }
                 guard let data = data, error == nil,
                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                       let current = json["current"] as? [String: Any],
                       let temp = current["temperature_2m"] as? Double else {
                     return
                 }
-                self?.currentTemperature = String(format: "%.0f°", temp)
-                self?.lastWeatherFetch = Date()
+                self.currentTemperature = String(format: "%.0f°", temp)
+                self.lastWeatherFetch = Date()
             }
         }.resume()
     }
