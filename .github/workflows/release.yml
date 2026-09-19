@@ -310,6 +310,55 @@ jobs:
           xcrun stapler staple "dist/Chronoface-${VERSION}.pkg"
           cp "dist/Chronoface-${VERSION}.pkg" "dist/Chronoface.pkg"
 
+      - name: Release notes from CHANGELOG.md
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # The "## VERSION - date" section of CHANGELOG.md: Markdown for the GitHub Release, HTML for the Sparkle update window.
+          # No section: the files stay empty and the release goes out without notes
+          python3 - "$VERSION" "$RUNNER_TEMP/notes.md" "$RUNNER_TEMP/notes.html" <<'PY'
+          import html
+          import sys
+          version, md_path, html_path = sys.argv[1:4]
+          section, inside = [], False
+          for line in open("CHANGELOG.md", encoding="utf-8").read().splitlines():
+              if line.startswith("## "):
+                  if inside:
+                      break
+                  heading = line[3:].strip()
+                  inside = heading == version or heading.startswith(version + " ")
+                  continue
+              if inside:
+                  section.append(line)
+          while section and not section[0].strip():
+              section.pop(0)
+          while section and not section[-1].strip():
+              section.pop()
+          out, in_list = [], False
+          for line in section:
+              s = line.strip()
+              if s.startswith("- "):
+                  if not in_list:
+                      out.append("<ul>")
+                      in_list = True
+                  out.append(f"<li>{html.escape(s[2:])}</li>")
+                  continue
+              if in_list:
+                  out.append("</ul>")
+                  in_list = False
+              if s.startswith("### "):
+                  out.append(f"<h3>{html.escape(s[4:])}</h3>")
+              elif s:
+                  out.append(f"<p>{html.escape(s)}</p>")
+          if in_list:
+              out.append("</ul>")
+          with open(md_path, "w", encoding="utf-8") as f:
+              f.write("\n".join(section) + ("\n" if section else ""))
+          with open(html_path, "w", encoding="utf-8") as f:
+              f.write("\n".join(out) + ("\n" if out else ""))
+          print(f"release notes for {version}: {len(section)} lines" if section else f"no CHANGELOG.md section for {version}")
+          PY
+
       - name: Publish Sparkle feed to chronoface.perek.rest
         if: startsWith(github.ref, 'refs/tags/v') && env.HAS_PKG_SIGNING == 'true' && env.DO_NOTARIZE == 'true'
         env:
@@ -360,10 +409,10 @@ jobs:
           XML
           fi
 
-          python3 - "$VERSION" "$ED_SIG" "$LENGTH" <<'PY'
+          python3 - "$VERSION" "$ED_SIG" "$LENGTH" "$RUNNER_TEMP/notes.html" <<'PY'
           import os, re, sys
           from datetime import datetime, timezone
-          version, sig, length = sys.argv[1:4]
+          version, sig, length, notes_path = sys.argv[1:5]
           with open("appcast.xml") as f:
               s = f.read()
           # A re-run of the same tag rebuilds the pkg byte-differently and
@@ -372,17 +421,18 @@ jobs:
           item_re = re.compile(r"[ \t]*<item>.*?</item>\n", re.S)
           s = item_re.sub(lambda m: "" if f"<sparkle:shortVersionString>{version}<" in m.group(0) else m.group(0), s)
           pub = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S +0000")
-          # Optional release notes for Sparkle's update dialog: an HTML
-          # fragment committed as release-notes/<version>.html.
-          notes_path = f"release-notes/{version}.html"
+          # Release notes for Sparkle's update dialog: the version's section of
+          # CHANGELOG.md, turned into HTML by the previous step.
           description = ""
+          notes = ""
           if os.path.exists(notes_path):
               with open(notes_path, encoding="utf-8") as f:
                   notes = f.read().strip().replace("]]>", "]]&gt;")
+          if notes:
               description = f"\n      <description><![CDATA[\n{notes}\n      ]]></description>"
-              print(f"release notes: {notes_path}")
+              print(f"release notes: {len(notes.splitlines())} lines from CHANGELOG.md")
           else:
-              print(f"release notes: {notes_path} not found, the item goes without a description")
+              print("no CHANGELOG.md section for this version, the item goes without a description")
           # CFBundleVersion equals the marketing version in this project, so
           # sparkle:version carries the same dotted string.
           item = f"""    <item>
@@ -429,6 +479,42 @@ jobs:
           name: Chronoface.saver
           path: Chronoface.saver.zip
 
+      - name: Write GitHub Release body
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          {
+            echo "## Chronoface $VERSION for macOS"
+            echo
+            if [ -s "$RUNNER_TEMP/notes.md" ]; then
+              cat "$RUNNER_TEMP/notes.md"
+              echo
+            fi
+            cat <<'MD'
+          ## Installation
+
+          **Recommended:** download `Chronoface.pkg`, double-click it and follow the installer steps.
+
+          On **macOS 14 Sonoma and later** it installs the Chronoface app into Applications together with a screensaver extension. Open System Settings → Screen Saver → Chronoface.
+
+          On **macOS 13 Ventura** it installs the legacy `.saver` into /Library/Screen Savers/.
+
+          **Alternative:** unzip `Chronoface.saver.zip` and double-click it - legacy `.saver` only, without the app.
+
+          ## Uninstall
+
+          On macOS 14+: open the Chronoface app and choose **Chronoface → Uninstall Chronoface…** from the menu bar.
+
+          On macOS 13: delete `/Library/Screen Savers/Chronoface.saver` in Finder.
+
+          ---
+
+          Signed with a Developer ID and notarized by Apple - Gatekeeper won't complain.
+          MD
+          } > "$RUNNER_TEMP/release-body.md"
+          cat "$RUNNER_TEMP/release-body.md"
+
       - name: Attach to Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
@@ -438,23 +524,4 @@ jobs:
             Chronoface.saver.zip
           generate_release_notes: true
           fail_on_unmatched_files: false
-          body: |
-            ## Installation
-
-            **Recommended:** download `Chronoface.pkg`, double-click it and follow the installer steps.
-
-            On **macOS 14 Sonoma and later** it installs the Chronoface app into Applications together with a screensaver extension. Open System Settings → Screen Saver → Chronoface.
-
-            On **macOS 13 Ventura** it installs the legacy `.saver` into /Library/Screen Savers/.
-
-            **Alternative:** unzip `Chronoface.saver.zip` and double-click it - legacy `.saver` only, without the app.
-
-            ## Uninstall
-
-            On macOS 14+: open the Chronoface app and choose **Chronoface → Uninstall Chronoface…** from the menu bar.
-
-            On macOS 13: delete `/Library/Screen Savers/Chronoface.saver` in Finder.
-
-            ---
-
-            Signed with a Developer ID and notarized by Apple - Gatekeeper won't complain.
+          body_path: ${{ runner.temp }}/release-body.md
