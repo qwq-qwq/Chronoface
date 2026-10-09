@@ -13,7 +13,7 @@ A minimalist **analog clock / watch face screensaver for macOS**: 16 dial themes
 ## Links
 
 - [Landing page](https://chronoface.perek.rest)
-- [Live demo](https://chronoface.perek.rest/index.html) - the entire screen saver running in a browser tab.
+- [Live demo](https://chronoface.perek.rest/chronoface.html) - the entire screen saver running in a browser tab.
 
 ## Features
 
