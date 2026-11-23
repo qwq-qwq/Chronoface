@@ -1829,15 +1829,34 @@ class ChronofaceRendererView: NSView {
         okButton.frame = NSRect(x: windowWidth - 92, y: okY, width: 72, height: okH)
         contentView.addSubview(okButton)
 
-        // Version label (по центру нижнего ряда, между Preview/краем и OK)
+        // Версия и ссылка «Star on GitHub»: пара по центру нижнего ряда, между Preview/краем и OK
         let versionString = (Bundle(for: type(of: self))
             .object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "dev"
         let versionLabel = NSTextField(labelWithString: "v\(versionString)")
         versionLabel.font = NSFont.systemFont(ofSize: 11)
         versionLabel.textColor = .secondaryLabelColor
-        versionLabel.alignment = .center
-        versionLabel.frame = NSRect(x: (windowWidth - 120) / 2, y: okY + (okH - 16) / 2, width: 120, height: 16)
+        versionLabel.sizeToFit()
+
+        let starButton = NSButton(title: "", target: self, action: #selector(openGitHubRepo(_:)))
+        starButton.isBordered = false
+        starButton.attributedTitle = NSAttributedString(
+            string: "\u{2605} Star on GitHub",
+            attributes: [.font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.linkColor]
+        )
+        starButton.toolTip = Self.gitHubRepoURL
+        starButton.sizeToFit()
+
+        let footerGap: CGFloat = 10
+        let footerWidth = versionLabel.frame.width + footerGap + starButton.frame.width
+        let footerX = ((windowWidth - footerWidth) / 2).rounded()
+        versionLabel.setFrameOrigin(NSPoint(
+            x: footerX,
+            y: okY + ((okH - versionLabel.frame.height) / 2).rounded()))
+        starButton.setFrameOrigin(NSPoint(
+            x: footerX + versionLabel.frame.width + footerGap,
+            y: okY + ((okH - starButton.frame.height) / 2).rounded()))
         contentView.addSubview(versionLabel)
+        contentView.addSubview(starButton)
 
         return (contentView, NSSize(width: windowWidth, height: windowHeight))
     }
@@ -2182,6 +2201,13 @@ class ChronofaceRendererView: NSView {
         } else {
             alert.runModal()
         }
+    }
+
+    static let gitHubRepoURL = "https://github.com/qwq-qwq/Chronoface"
+
+    @objc private func openGitHubRepo(_ sender: NSButton) {
+        guard let url = URL(string: Self.gitHubRepoURL) else { return }
+        NSWorkspace.shared.open(url)
     }
 
     @objc private func closeConfigSheet(_ sender: NSButton) {
