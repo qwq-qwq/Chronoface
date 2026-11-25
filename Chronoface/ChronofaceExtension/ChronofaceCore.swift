@@ -2256,7 +2256,7 @@ class ChronofaceRendererView: NSView {
                       let temp = current["temperature_2m"] as? Double else {
                     return
                 }
-                self.currentTemperature = String(format: "%.0f°", temp)
+                self.currentTemperature = "\(Int(temp.rounded()))°"
                 self.lastWeatherFetch = Date()
             }
         }.resume()
